@@ -1,0 +1,13 @@
+1. Install Eclipse and Android tools (ignore, if already installed). 
+ 
+2. Create a new workspace in Eclipse (or use an existing one). 
+ 
+3. Import RoutineClient into the workspace. 
+ 
+4. Import RoutineLibrary into the workspace. 
+ 
+5. Clean and build both. 
+ 
+6. Run RoutineClient in your Android device. 
+ 
+7. If problems occur, refer to README and/or other documentation. 

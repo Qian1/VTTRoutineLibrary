@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="ApplicationName">RoutineClient</string>
+    <string name="OnCreateString">onCreate()</string>
+    <string name="OnDestroyString">onDestroy()</string>
+    <string name="OnReceiveString">onReceive()</string>
+    <string name="RoutineClientActivityString">RoutineClientActivity</string>
+    <string name="RoutineClientServiceString">RoutineClientService</string>
+	<string name="StatusString">Status: Routine detection started</string>
+	<string name="StoppingRecognitionString">Stopping recognition&#8230;</string>
+	<string name="StopRoutineClientServiceString">fi.vtt.routineclient.STOP_ROUTINECLIENTSERVICE</string>
+
+</resources>

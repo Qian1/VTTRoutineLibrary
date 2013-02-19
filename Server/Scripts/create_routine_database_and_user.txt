@@ -1,0 +1,15 @@
+
+Linux:
+
+sudo -u postgres /usr/lib/postgresql/9.1/bin/createuser -D -A -P -p 5433 routine
+sudo -u postgres /usr/lib/postgresql/9.1/bin/createdb -p 5433 -O routine routine_db
+sudo service postgresql restart
+/usr/lib/postgresql/9.1/bin/psql -p 5433 -U routine -d routine_db
+
+
+Windows, for local development:
+
+createuser -U postgres -D -A -P routine
+createdb -U postgres -O routine routine_db
+psql -U routine -d routine_db
+

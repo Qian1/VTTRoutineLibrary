@@ -1,0 +1,103 @@
+In order to use HTTPS connection(s) between the RoutineClient and Server (ActivityLogger), 
+you will need to create your own SSL certificate for both Tomcat and Android sides. 
+ 
+In addition, Android does not (currently, for some reason) support self-generated certificates, 
+which means to you will have to either (if you wish to use HTTPS): 
+ 
+	a) disable certificate check (not recommended) or 
+	b) use the "hack" provided here. 
+ 
+Here are simple instructions on how to proceed (more information can be found from the Web, if 
+needed), if you wish to use HTTPS connections: 
+ 
+	1) Generate a certificate for the Tomcat at server side: 
+ 
+			keytool -genkey -alias tomcat -keyalg RSA -keystore tomcat_keystore 
+ 
+			Enter keystore password: <input the password you want to use or RETURN for no password> 
+			Re-enter new password: <input the password you want to use or RETURN for no password> 
+			What is your first and last name? 
+			[Unknown]:  <input the name you want to use or RETURN for no name> 
+			What is the name of your organizational unit? 
+			[Unknown]:  <input the name you want to use or RETURN for no name> 
+			What is the name of your organization? 
+			[Unknown]:  <input the name you want to use or RETURN for no name> 
+			What is the name of your City or Locality? 
+			[Unknown]:  <input the name you want to use or RETURN for no name> 
+			What is the name of your State or Province? 
+			[Unknown]:  <input the name you want to use or RETURN for no name> 
+			What is the two-letter country code for this unit? 
+			[Unknown]:  <input the two letters you want to use or RETURN for no country code> 
+			Is CN=<What you inputted>, OU=<What you inputted>, O=<What you inputted>, L=<What 
+			you inputted>, ST=<What you inputted>, C=<What you inputted> correct? 
+			[no]:  yes 
+ 
+			Enter key password for <tomcat> (RETURN if same as the keystore password): 
+			<input the Tomcat password or RETURN for keystore password> 
+ 
+	2) Copy the generated keystore to the Tomcat /conf -folder: 
+ 
+			cp tomcat_keystore apache-tomcat-<version number>/conf/ 
+ 
+	3) Modify your Tomcat's server.xml by adding a HTTPS connector: 
+ 
+			<Connector port="<input your desired port number>" maxHttpHeaderSize="8192" 
+			 protocol="HTTP/1.1" SSLEnabled="true" 
+			 maxThreads="150" minSpareThreads="25" maxSpareThreads="75" 
+			 enableLookups="false" disableUploadTimeout="true" 
+			 acceptCount="100" scheme="https" secure="true" 
+			 keystoreFile="/home/<user>/apache-tomcat-<version number>/conf/tomcat_keystore" 
+			 keystorePass="<keystore password here>" 
+			 ciphers="SSL_RSA_WITH_RC4_128_MD5, SSL_RSA_WITH_RC4_128_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, 
+			 TLS_DHE_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 
+			 SSL_RSA_WITH_3DES_EDE_CBC_SHA, SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA, 
+			 SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA" 
+			 clientAuth="false" sslProtocol="TLS"/> 
+ 
+ 	4) Generate the cerfiticate for the client side: 
+ 
+			a) Get the server side (Tomcat) certificate. 
+ 
+ 			b) Create the keystore for your Android application: 
+ 
+ 				- Download the latest BouncyCastle Provider (http://bouncycastle.org/) or use the better 
+ 				  suited version of the two provided ones under the /dependencies/ -folder. 
+ 
+ 				- Import the server certificate and create your client side certificate with keytool: 
+ 
+ 				 	keytool -importcert -v -trustcacerts -file ".../your_path/your_server_side_certificate.cer" 
+ 				 	-alias yourAlias -keystore ".../RoutineLibrary/res/raw/keystore.bks" 
+ 				 	-provider org.bouncycastle.jce.provider.BouncyCastleProvider 
+ 				 	-providerpath "your_path_to_the/Bouncy Castle Provider, such as: .../dependencies/bcprov-jdk16-146.jar" 
+ 				 	-storetype BKS -storepass "your_password" 
+ 
+			c) Use the custom keystore in your application: 
+ 
+				private SSLSocketFactory mySSLSocketFactory() { 
+					try { 
+						KeyStore keyStore = KeyStore.getInstance("BKS"); 
+	
+						InputStream inputStream = context.getResources().openRawResource(R.raw.keystore); 
+	
+						try { 
+							keyStore.load(inputStream, "your_password".toCharArray()); 
+						} 
+						finally { 
+							inputStream.close(); 
+						} 
+	
+						return new SSLSocketFactory(keyStore); 
+					} 
+					catch (Exception exceptionIncoming) { 
+						throw new AssertionError(exceptionIncoming); 
+					} 
+				} 
+ 
+				SchemeRegistry schemeRegistry = new SchemeRegistry(); 
+				schemeRegistry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80)); 
+				//Normally you would use SSLSocketFactory, but now you need to use your own one: 
+				//schemeRegistry.register(new Scheme("https", SSLSocketFactory.getSocketFactory(), 443)); 
+				schemeRegistry.register(new Scheme("https", mySSLSocketFactory(), 443)); 
+ 
+ 	5) That should do the trick! If not, use the Google, Luke. :) 
+ 

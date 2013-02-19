@@ -1,0 +1,10 @@
+
+-- just for testing purposes
+
+DELETE FROM user_routines CASCADE;
+DELETE FROM routine_classes CASCADE;
+DELETE FROM raw_measurements CASCADE;
+DELETE FROM measurement_applications CASCADE;
+DELETE FROM logger_applications CASCADE;
+DELETE FROM devices CASCADE;
+DELETE FROM application CASCADE;

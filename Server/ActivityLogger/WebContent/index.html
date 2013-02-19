@@ -1,0 +1,391 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>Activity Logger REST API</title>
+
+</head>
+<body>
+<h1>Activity Logger REST API</h1>
+
+<p><small>Last updated: February 2013</small></p>
+
+<p><small>Version: 0.20<br>
+Common unfiltered GET interface to data in the REST service is ready.
+REST API URLs now require HTTP basic authentication and SSL (HTTPS). This index page is open to all. 
+In addition to the server HTTP authentication, the code demonstrates both a security role and a user name specific access controls
+(the former is preferred). Private data is accessed by using (a secret) device name hash.
+Request parameters can now be now parsed but not used except for devices URLs.
+Example and test request URLs have been added.
+POST methods include only adding raw data and a new user routine.
+</small></p>
+
+<h2>Introduction</h2>
+<p>This is the description for REST service for
+mobile device users. It is used for storing and retrieving user
+activity, application use and location routine records.</p>
+<p>The server runs on Apache Tomcat and uses PostgreSQL database
+for storing data. The HTTP REST interface is implemented using the
+Jersey libraries.</p>
+<p>Supported request formats are XML, visual XML for browsers and
+JSON. The first and the last format is meant for application use, the
+browser XML format for human access via a web browser.</p>
+
+<h2>Security model</h2>
+
+<h3>Access rights:</h3>
+<ul>
+ <li>Main page is open to all (communication mode HTTP/HTTPS).</li>
+ <li>All REST services are protected with HTTPS (SSL) using a developer (self-signed) certificate.</li>
+ <li>All REST services requite an HTTP Basic authentication. There are two groups: administrators and users.</li>
+ <li>Administrators can access all services without using device_name parameter.</li>
+ <li>Users need to add a query parameter <i>device_name</i> to all sensitive (user specific) data queries and all POST queries.</li>
+ <li><i>device_name</i> identifies a specific mobile device (and thus user) in the database. It is used as a password for your own data.</li>
+</ul>
+
+<h3>Intended handling of creating a new user:</h3>
+<ul>
+ <!-- Too complex to set up:
+ <li>Request your <i>device_name</i> to be added to the database by an administrator. Contact information will be provided...</li>
+ <li>Administrator will POST the new device information to the database and provide the user with the user credentials for HTTP Basic authentication.</li>
+ -->
+ <li>
+  Request your user credentials for the HTTP Basic authentication of the service from its administrator.
+ </li>
+ <li>Add your device to the database by making a POST request with correct JSON data to the devices URL.</li>
+ <li>Verify that your device is found by GET query to URL .../devices/<i>device_name</i>.</li>
+ <li>After that, use other REST services (GET/POST) with the query parameter <samp>...?device_name=<i>device_name</i></samp> after URL.</li>
+ <li>
+  A new user should POST any new location (routine_type_id=0), application use (routine_type_id=1) or named routine classes (routine_type_id=2) to the
+  routine_classes URL. They are also added automatically as needed when POSTing user routines.
+ </li>
+ <li>A new user could also POST his own logger_application_name to logger_applications URL but it is also added implicitly, if needed.</li>
+ <li>User can add two kinds of routine data to the service:</li>
+</ul>
+<ol>
+ <li>Raw measurements (location and application use at a certain time).</li>
+ <li>
+  User routines consisting of either location, application use or (automatically and algorithmically recognized) named combination routines,
+  taking place during some time period.
+ </li>
+</ol>
+ <p>
+  Final note: The service will accept also POSTing user routine items without prior registration of device_name, logger_application_name,
+  routine_class_name or routine_class_id, if such fields are defined in the posted user routine. The necessary records will be created automatically
+  into the database, as needed, using some default values for missing parameters.
+ </p>
+
+<h2>REST URLs by the method</h2>
+
+<p>The URL starts with the HTTP scheme and resource address, for
+example <samp>http://localhost:8080/</samp> or <samp>https://&lt;your server&gt;:&lt;port&gt;/</samp></p>
+
+<h3>GET</h3>
+<h4>Plain requests without any query parameters (mostly work only for the administrators)</h4>
+<dl>
+<dt><a href="rest/hello"><samp>/ActivityLogger/rest/hello</samp></a></dt>
+<dd>Hello world test application.</dd>
+<dt><a href="rest/rawdata/123456"><samp>/ActivityLogger/rest/rawdata/123456</samp></a></dt>
+<dd>Test view to uploaded raw data.</dd>
+<dt><a href="rest/devices"><samp>/ActivityLogger/rest/devices</samp></a></dt>
+<dd>List of all devices (=users) in the system.</dd>
+<dt><a href="rest/devices/123456"><samp>/ActivityLogger/rest/devices/123456</samp></a></dt>
+<dd>Details of one device, here with the name 123456. In
+practise this is a long SHA1 device hash.</dd>
+<dt><a href="rest/logger_applications"><samp>/ActivityLogger/rest/logger_applications</samp></a></dt>
+<dd>List of device/user specific activity stores. This enables
+one device to have several users, profiles or activity logging
+applications.</dd>
+<dt><a href="rest/applications"><samp>/ActivityLogger/rest/applications</samp></a></dt>
+<dd>Lists all the different applications in the mobile device
+that have been used during routine recording.</dd>
+<dt><a href="rest/applications/RoutineClient"><samp>/ActivityLogger/rest/applications/RoutineClient</samp></a></dt>
+<dd>Example application entry accessible by its name.</dd>
+<dt><a href="rest/raw_measurements"><samp>/ActivityLogger/rest/raw_measurements</samp></a></dt>
+<dd>List of all unprocessed routine records (contains location info but not the unwrapped applications list). WARNING: May return a lot of data.</dd>
+<dt><a href="rest/raw_measurements/1"><samp>/ActivityLogger/rest/raw_measurements/1</samp></a></dt>
+<dd>Example of one entry in the raw measurements records.</dd>
+<dt><a href="rest/routine_classes"><samp>/ActivityLogger/rest/routine_classes</samp></a></dt>
+<dd>List of all routine classes: Location routines, application
+routines and user defined (combination) routines.</dd>
+<dt><a href="rest/routine_classes/1"><samp>/ActivityLogger/rest/routine_classes/1</samp></a></dt>
+<dd>Routine class info.</dd>
+<dt><a href="rest/user_routines"><samp>/ActivityLogger/rest/user_routines</samp></a></dt>
+<dd>List of all stored user routines with full metadata and
+context information included.</dd>
+<dt><a href="rest/user_routines/1"><samp>/ActivityLogger/rest/user_routines/1</samp></a></dt>
+<dd>Example user routine.</dd>
+<dt><a href="rest/mccs"><samp>/ActivityLogger/rest/mccs</samp></a></dt>
+<dd>List of all mobile country codes.</dd>
+<dt><a href="rest/mccs/302"><samp>/ActivityLogger/rest/mccs/302</samp></a></dt>
+<dd>Resolving only one country entry.</dd>
+<dt><a href="rest/"><samp>/ActivityLogger/rest/</samp></a></dt>
+<dd>Nothing found here (HTTP 404)...</dd>
+</dl>
+
+<h4>Test requests with query parameters (specifically meant for service users and developers)</h4>
+
+<dl>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27%2B02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-10-19">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27%2B02&amp;device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&amp;logger_application_name=Samsung_Galaxy_S_log&amp;start_time=2012-06-18T22:54:15.000Z&amp;end_time=2012-10-19</samp>
+</a></dt>
+<dd>List of all devices (=users) in the system using query parameters (encoded URL, CORRECT).</dd>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27+02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-10-19">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27+02&amp;device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&amp;logger_application_name=Samsung_Galaxy_S_log&amp;start_time=2012-06-18T22:54:15.000Z&amp;end_time=2012-10-19</samp>
+</a></dt>
+<dd>List of all devices (=users) in the system using query parameters (plain URL, WRONG).</dd>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27%2B02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=bogus">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27%2B02&amp;device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&amp;logger_application_name=Samsung_Galaxy_S_log&amp;start_time=2012-06-18T22:54:15.000Z&amp;end_time=bogus</samp>
+</a></dt>
+<dd>List of all devices (=users) in the system using query parameters (encoded URL, incorrect timestamp results to HTTP 500).</dd>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27%2B02&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-10-19">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27%2B02&amp;logger_application_name=Samsung_Galaxy_S_log&amp;start_time=2012-06-18T22:54:15.000Z&amp;end_time=2012-10-19</samp>
+</a></dt>
+<dd>List of all devices (=users) in the system using query parameters (encoded URL).
+Only administrator can request this because <i>device_name</i> query parameters is missing from the URL. Others get HTTP 403.</dd>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27%2B02&start_time=2012-08-08T17:54:15.000Z&end_time=2012-10-03T12:00:00.0%2B03">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27%2B02&amp;start_time=2012-08-08T17:54:15.000Z&amp;end_time=2012-10-03T12:00:00.0%2B03</samp>
+</a></dt>
+<dd>Pick one device in the middle of recording period.</dd>
+
+<dt><a href="rest/devices?timestamp=2012-08-14T22:13:27%2B02&logger_application_name=Tallennussovellus%201&start_time=2012-08-08T17:54:15.000Z&end_time=2012-10-03T12:00:00.0%2B03">
+		<samp>/ActivityLogger/rest/devices&#63;timestamp=2012-08-14T22:13:27%2B02&amp;logger_application_name=Tallennussovellus%201&amp;start_time=2012-08-08T17:54:15.000Z&amp;end_time=2012-10-03T12:00:00.0%2B03</samp>
+</a></dt>
+<dd>Same as above but with the redundant query parameter <i>logger_application_name</i></dd>
+
+<dt><a href="rest/devices/123456?timestamp=2012-08-14T22:13:27+02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-09-19">
+		<samp>/ActivityLogger/rest/devices/123456&#63;timestamp=2012-08-14T22:13:27+02&amp;device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&amp;logger_application_name=Samsung_Galaxy_S_log&amp;start_time=2012-06-18T22:54:15.000Z&amp;end_time=2012-09-19</samp>
+</a></dt>
+<dd>Request one device with redundant query parameters.</dd>
+
+</dl>
+
+<h3>POST</h3>
+
+<p>
+ Recommended testing is to be done using Firefox Poster plugin at this time (no test form is provided). Remember to fill in the User Auth fields.
+ Because of forced HTTPS the testing on localhost URLs may fail the HTTP connection authentication.
+</p>
+
+<dl>
+
+<dt><a href="rest/user_routines/test"><samp>/ActivityLogger/rest/user_routines/test</samp></a></dt>
+<dd>
+ POST a new user routine to the database temporarily and return all user routines with the new routine added. Then undo the storing operation.
+ <p>
+ Correct test JSON content example is given below. Values in <i>italics</i> are ignored in POST requests as they are created by the database upon
+ insertion. They can thus be omitted from the JSON. Also undefined fields can be omitted, resulting in <i>null</i> or 0 default values. GSON library
+ also allows to insert extra fields into the JSON object but they will not be parsed and bound into the target object.
+ </p>
+ <pre>
+{
+ <i>"userRoutinesId":"6",</i>
+ "startTime":"2012-11-15 16:53:00+02",
+ "endTime":"2012-11-15 18:00:01+02",
+ "routineClassId":"5",
+ <i>"rawMeasurementId":"100000",</i>
+ "confidence":"0.99",
+ "application":[
+   {
+    <i>"applicationId":"21",</i>
+    "applicationName":"Used application 1",
+    "packageClassName":"fi.vtt.testing.a"
+   },
+   {
+    <i>"applicationId":"22",</i>
+    "applicationName":"Used application 2",
+    "packageClassName":"fi.vtt.testing.b"
+   }
+ ],
+ "routineClassName":"Dummy calculated routine",
+ "latitude":"-1000",
+ "longitude":"-1000",
+ "cellId":"3400",
+ "deviceName":"Some test device name hash",
+ "loggerApplicationName":"Some test logger application name"
+}
+ </pre>
+ <p>
+  Expected return values are HTTP status codes "200 OK" (with the JSON/XML list of user routines),
+  "422 Unprocessable Entity" for bad JSON or "500 Internal Server Error" for bad data values.
+  Other error codes may also appear as documented at the end of this page...
+ </p>
+ <p>
+  This POST does not use any query parameters as the <i>device_name</i> is embedded into the data anyway. Also, this URL is meant for the
+  administrator to use in testing.
+ </p>
+ <p>
+  This method is now left unfinished. It just adds <i>testInsertUserRoutine device name</i> to the devices table and returns that record for further
+  processing into the user routines list (which obviously fails and makes the server return HTTP 500 Internal Server Error for the POST request).
+ </p>
+</dd>
+
+<dt><a href="rest/user_routines"><samp>/ActivityLogger/rest/user_routines</samp></a></dt>
+<dd>
+ POST a new user routine to the database. Saves the device name if it does not exist in the database (using current time, "plat" for platform and
+ 244 (Finland) for mcc values), the logger application if not present, raw measurement, routine class if not present, list of
+ applications (application entry created if an entry with the same name and package class name does not already exist) and user routine entries
+ binding all these values together. One or more user routine bindings in the DB form one user routine entry on user routine requests.
+ <p>
+ Correct JSON content example is given below. Values in <i>italics</i> are ignored in POST requests as they are created by the database upon insertion.
+ They can thus be omitted from the JSON. Also undefined fields can be omitted, resulting in <i>null</i> or 0 default values. GSON library also allows
+ to insert extra fields into the JSON object but they will not be parsed and bound into the target object.
+ </p>
+ <p>
+  Null (undefined) values for different fields are defined as follows:<br>
+  String missing or empty.<br>
+  GPS co-ordinate value -1000.<br>
+  routineTypeId 0 (= location routine, 1 = application routine and 2 = user defined routine)<br>
+  Cell ID -1.<br>
+  Application list empty or missing.
+ </p>
+ <p>
+  Referenced raw measurement record gets automatically the timestamp of the insertion time.
+  It is likely outside the routine period (start time - end time) but time of the raw measurement is not meant to be used in the context of user routine
+  properties.
+ </p>
+ <pre>
+{
+ <i>"userRoutinesId":"7",</i>
+ "startTime":"2012-11-28 13:00:00+02",
+ "endTime":"2012-11-28 21:54:28+02",
+ "routineClassId":"5",
+ <i>"rawMeasurementId":"1000000",</i>
+ "confidence":"1.0",
+ "application":[
+   {
+    <i>"applicationId":"27",</i>
+    "applicationName":"Test user routine application 1",
+    "packageClassName":"fi.vtt.testing.A"
+   },
+   {
+    <i>"applicationId":"28",</i>
+    "applicationName":"Test user routine application 2",
+    "packageClassName":"fi.vtt.testing.B"
+   }
+ ],
+ "routineTypeId":2,
+ "routineClassName":"Test combination routine",
+ "latitude":"-60.7617",
+ "longitude":"-23.4843",
+ "cellId":"40",
+ "deviceName":"Test user device for user routines",
+ "loggerApplicationName":"Test logger application name"
+}
+ </pre>
+ <p>
+  Expected return values are HTTP status codes "201 Created" (with the Location header containing the URL of the new resource),
+  "422 Unprocessable Entity" for bad JSON or "500 Internal Server Error" for bad data values (test 500 by using the text "test error" as the POSTed
+  content). Other error codes may also appear as documented at the end of this page...
+ </p>
+ <p>
+  This POST does not need any query parameters as the <i>device_name</i> is embedded into the data anyway. Also, it is not possible to access (other)
+  user's data by POSTing data.
+ </p>
+ <p>
+  Do not set the Accept header in the request to "application/json" since the request may only return "text/plain" on some errors.
+  Value ""application/json, text/plain" is generally safe on clients for both GET and POST, as is not specifying the Accept header for any POST.
+  Incorrect Accept header on request will produce the "406 Not Acceptable" HTTP error response.
+ </p>
+</dd>
+
+<dt><a href="rest/rawdata"><samp>/ActivityLogger/rest/rawdata</samp></a></dt>
+<dd>
+ POST raw location and application usage measurements to the database. Saves the device name if it does not exist in the database (using current time,
+ "plat" for platform and 244 (Finland) for mcc values), the logger application if not present, raw measurement, and a list of
+ applications (application entry created if an entry with the same name and package class name does not already exist).
+ <p>
+ Correct JSON content example is given below. Real values should be supplied to those fields in <i>italics</i>.
+ Undefined fields can be omitted in JSON, resulting in <i>null</i> or 0 default values. GSON library also allows
+ to insert extra fields into the JSON object but they will not be parsed and bound into the target object.
+ </p>
+ <p>
+  Null (undefined) values for different fields are defined as follows:<br>
+  String missing or empty.<br>
+  GPS co-ordinate value -1000.<br>
+  Cell ID -1.<br>
+  Application list empty or missing.
+ </p>
+ <pre>
+ {
+ "application":[
+   {
+    "applicationName":"<i>Test user routine application 1</i>",
+    "packageClassName":"<i>fi.vtt.testing.A</i>"
+   },
+   {
+    "applicationName":"<i>Test user routine application 2</i>",
+    "packageClassName":"<i>fi.vtt.testing.B</i>"
+   }
+   ...
+ ],
+ "latitude":"<i>-60.7617</i>",
+ "longitude":"<i>-23.4843</i>",
+ "cellId":"<i>40</i>",
+ "deviceName":"<i>device name hash</i>",
+ "loggerApplicationName":"<i>logger application name</i>",
+ "timeStringPresentation":"<i>2012-12-18T14:08:17.734</i>",
+ "timestamp":<i>1357913297734</i>
+} 
+ </pre>
+ <p>
+  Expected return values are HTTP status codes "201 Created" (with the Location header containing the URL of the new resource),
+  "422 Unprocessable Entity" for bad JSON or "500 Internal Server Error" for bad data values (test 500 by using the text "test error" as the POSTed
+  content). Other error codes may also appear as documented at the end of this page...
+ </p>
+ <p>
+  This POST does not need any query parameters as the <i>device_name</i> is embedded into the data anyway. Also, it is not possible to access (other)
+  user's data by POSTing data.
+ </p>
+ <p>
+  Do not set the Accept header in the request to "application/json" since the request may only return "text/plain" on some errors.
+  Value ""application/json, text/plain" is generally safe on clients for both GET and POST, as is not specifying the Accept header for any POST.
+  Incorrect Accept header on request will produce the "406 Not Acceptable" HTTP error response.
+ </p>
+</dd>
+
+</dl>
+
+<h3>PUT</h3>
+<p>Updating existing data is not possible for now.</p>
+<h3>DELETE</h3>
+<p>Deleting existing data is not possible for now.</p>
+
+<h2>HTTP response codes for GET and POST (PUT and DELETE are not supported on the service but OPTIONS and HEAD are automatically)</h2>
+<p>Not all message types have been implemented by the service. The response is also URL (resource) specific.</p>
+<!-- The tabbing inside pre does not align the same way in this file as in the browser... -->
+<pre>
+200 OK				Regular response to GET requests. Also provides some content to display as described by the Content Type header.
+201 Created			POST: Return URL of the created resource in the Location header.
+204 No Content			The message after a successful DELETE request. No DELETE methods have been implemented, though.
+
+400 Bad Request			The request cannot be fulfilled due to bad syntax. More related to the HTTP protocol itself than REST.
+401 Unauthorized		Missing or wrong HTTP authentication. The service should force HTTP to HTTPS when using the REST API.
+403 Forbidden			An autenticated user has insuffiecient rights to use the resource. Administrators should not see this.
+404 Not Found			URL or resource by the id is not found. When using query parameters the response is an empty set if matches were not found.
+405 Method Not Allowed		POST, PUT and DELETE request were made to wrong URLs (returns available methods in the Allow header).
+406 Not Acceptable		The HTTP requests ahould have application/json, text/html, text/xml or text/plain in their Accept headers (or nothing).
+415 Unsupported Media Type	POST request did not contain JSON as a payload. Not yet implemented.
+422 Unprocessable Entity	POST request did not contain valid JSON as a payload.
+
+500 Internal Server Error	Server or database error. Check query parameters for correct format (e.g. use ISO 8601 timestamps).
+501 Not Implemented		Response to PUT ja DELETE, OPTIONS and HEAD requests (ActivityLogger does not support those methods). Not yet implemented.
+503 Service Unavailable		The server is under much load or other temporary problem (try again later). Not yet implemented.
+</pre>
+
+<hr>
+<h2>Todos and known problems:</h2>
+<ul>
+<li>Query parameters and security only work for devices URLs.</li>
+<li>
+ Firefox Poster plugin does not work with HTTPS localhost URLs. The response jams after the headers have been loaded. To test locally, set
+ <i>transport guarantee</i> element to NONE instead of CONFIDENTAL in the web.xml configuration file of the application. CURRENTLY SET TO NONE.
+</li>
+<li>There is no way to add full device details currently (direct POST missing).</li>
+<li>See also the document <i>Developer notes.rtf</i>...</li>
+</ul>
+
+</body></html>

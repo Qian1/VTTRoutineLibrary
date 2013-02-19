@@ -1,0 +1,2122 @@
+{\rtf1\ansi\ansicpg1252\deff0\deflang1033{\fonttbl{\f0\fswiss\fcharset0 Arial;}{\f1\fswiss\fprq2\fcharset0 Arial;}{\f2\fmodern\fprq1\fcharset0 Courier New;}{\f3\froman\fcharset0 Times New Roman;}{\f4\fnil Courier New;}{\f5\fnil\fcharset0 Arial;}{\f6\fnil\fcharset0 Courier New;}{\f7\fswiss\fprq2\fcharset238{\*\fname Arial;}Arial CE;}{\f8\fnil\fcharset2 Symbol;}}
+{\colortbl ;\red0\green0\blue0;\red128\green128\blue128;\red192\green192\blue192;\red0\green0\blue255;\red128\green0\blue0;\red0\green128\blue0;\red255\green0\blue0;\red128\green128\blue0;\red232\green242\blue254;\red0\green128\blue128;\red63\green127\blue127;\red127\green0\blue127;\red42\green0\blue255;\red63\green95\blue191;\red127\green0\blue85;\red63\green127\blue95;\red100\green100\blue100;\red0\green0\blue192;\red127\green159\blue191;}
+{\*\generator Msftedit 5.41.15.1515;}\viewkind4\uc1\pard\f0\fs36\tab\tab\tab\cf1\ul\f1 ACTIVITY LOGGER DEVELOPER NOTES\par
+\cf0\ulnone\f0\par
+\fs16 Modification history:\par
+11.1.2013\tab Initial version.\fs20\par
+\fs16 15.1.2013\tab Additions and corrections.\fs20\par
+\fs16 22.1.2013\tab Added \i routine_db\i0  database schema and PuTTY configuration example.\fs20\par
+\fs16 30.1.2013\tab Added information about unit tests.\par
+5.2.2013\tab\tab Removed private information and fixed typos.\fs20\par
+\par
+\tab\tab\ul\fs32 BACKGROUND\ulnone\fs20\par
+\par
+The purpose of the ActivityLogger Web service is to provide a database for storing routine data of mobile device users. The routine data consists of device location and application use at different times of day plus some metadata. Raw routine data can also be classified into named routines using proprietary algorithms in the client devicde. Such \i user routines\i0  can be recognized later and also be stored to the database.\par
+\par
+The REST API provides access to the data for both people using a Web browser or to any application capable of making and processing HTTP requests. The routine payload data can be both JSON and XML.\par
+\par
+\fs32\tab\tab\ul MEASUREMENTS MADE BY THE ANDROID CLIENT DEVICE\ulnone\fs20\par
+\par
+\fs28\tab RAW MEASUREMENTS\fs20\par
+\par
+Data consists of:\par
+- Timestamp (not period)\par
+- GPS location (if available or -1000 for missing values)\par
+- CellID location (if available)\par
+- Array of running applications in the device\par
+- Device (user) id as a SHA1 hash (device BT MAC + time + salt).\par
+- Data collecting profile name (to separate users or user routine applications inside the same device).\par
+\par
+Example upload JSON (values in \i italics\i0  are explanations of the actual value, while \cf2 gray\cf0  values are optional and \cf3 silver\cf0  values unnecessary; the unnecessary fields are shown here because they appear when downloading records from the server):\par
+\pard\sb100\sa100\lang1035\f2\fs16\{\line "application":[\line\{\line\cf3 "applicationId":"27",\cf0\line "applicationName":"Test user routine application 1",\line "packageClassName":"fi.vtt.testing.A"\line\},\line\{\line\cf3 "applicationId":"28",\cf0\line "applicationName":"Test user routine application 2",\line "packageClassName":"fi.vtt.testing.B"\line\}\line ],\line\cf2 "latitude":"-60.7617",\line "longitude":"-23.4843",\line "cellId":"40",\line\cf0 "deviceName":"\i device hash value\i0 ",\line "loggerApplicationName":"\i a name to identify the used routine data profile in a device\i0 ",\line "timeStringPresentation":"2012-12-18T14:08:17.734",\line "timestamp":1357913297734\line\} \f3\fs24\par
+\pard\lang1033\f0\fs20\par
+These values are typically stored every few seconds or minutes during a day. They can be used to identify repeating (daily or weekly) user routines.\par
+\par
+\fs28\tab USER ROUTINE DATA\fs20\par
+\par
+A recognized and a named user routine. The routine type and name is stored separately in the database and it is device specific.\par
+\par
+Data consists of:\par
+- Time period\par
+- GPS location (if available or -1000 for missing values)\par
+- CellID location (if available)\par
+- Array of running applications in the device\par
+- Device (user) id as a SHA1 hash (device BT MAC + time + salt).\par
+- Data collecting profile name (to separate users or user routine applications inside the same device).\par
+- User routine type, id and name (device but not data logging profile specific).\par
+- Routine recognition confidence value.\par
+\par
+Example upload JSON (values in \i italics\i0  are explanations of the actual value, while \cf2 gray\cf0  values are optional and \cf3 silver\cf0  values unnecessary; the unnecessary fields are shown here because they appear when downloading records from the server):\par
+\par
+\cf4\ul https://server/ActivityLogger/rest/user_routines\cf0\ulnone\par
+\par
+\f2\fs16\{\par
+\cf3  "userRoutinesId":"7",\par
+\cf0  "startTime":"2012-11-28 13:00:00+02",\par
+ "endTime":"2012-11-28 21:54:28+02",\par
+\cf3  "routineClassId":"5",\par
+\cf0  "rawMeasurementId":"1000000",\par
+ "confidence":"1.0",\par
+\cf2  "application":[\par
+   \{\par
+\cf3     "applicationId":"27",\par
+\cf2     "applicationName":"Test user routine application 1",\par
+    "packageClassName":"fi.vtt.testing.A"\par
+   \},\par
+   \{\par
+\cf3     "applicationId":"28",\par
+\cf2     "applicationName":"Test user routine application 2",\par
+    "packageClassName":"fi.vtt.testing.B"\par
+   \}\par
+ ],\par
+\cf0  "routineTypeId":2,\par
+ "routineClassName":"Test combination routine",\par
+\cf2  "latitude":"-60.7617",\par
+ "longitude":"-23.4843",\par
+ "cellId":"40",\par
+\cf0  "deviceName":"Test user device for user routines",\par
+ "loggerApplicationName":"Test logger application name"\par
+\}\f0\fs20\par
+\par
+These values can be stored at any time (since they specify the time period). A typical usage is to upload the daily routines every evening to the server.\par
+\par
+\tab\tab\ul\fs32 DATA TRANSFER DETAILS\ulnone\fs20\par
+\par
+\fs28\tab HTTP REST API\fs20\par
+\par
+\b The latest notes can be found from the index.html of the ActivityLogger service.\b0\par
+\par
+If the same value (e.g. timestamp) was defined in multiple places in a message, here is the precedence (we pick the first defined value):\par
+1. HTTP body (JSON data).\par
+2. Request parameter (POST/GET)\par
+\cf2 3. HTTP protocol header (if applicable?)\cf0\par
+4. URL parameter ("GET")\par
+\par
+As a general REST principle, GET method will not change the database, whatever the parameters, while POST is meant exactly for adding and modifying data. We do not support updating via PUT or deleting via DELETE HTTP methods.\par
+\par
+Links:\par
+\cf4\ul http://microformats.org/wiki/rest/urls\cf0\ulnone\tab\tab\tab\tab What characters you can use in URLs.\par
+\cf4\ul http://www.blooberry.com/indexdot/html/topics/urlencoding.htm\cf0\ulnone\tab URL character conversion.\par
+\cf4\ul http://www.peej.co.uk/articles/restfully-delicious.html\cf0\ulnone\tab\tab Shows the REST interface also from the HTTP point of view.\par
+\par
+- Necessary information (combined form the REST URL):\par
+  o http://<server>:<port>/\par
+  o Name of the WWW application: \i ActivityLogger\i0  (also the name of the Tomcat WAR package).\par
+  o rest/ to identify the use of the REST API.\par
+  o Device identifier (hash).\par
+  o REST path to the interesting resource.\par
+  o ?Optional URL request parameters (device name, logger application name, time period).\par
+\par
+- The body of the HTTP request contains a JSON object whose fields will be stored to the \i routine_db\i0  database with timestamps.\par
+\par
+\ul\b\fs24 Timestamps background information\ulnone\b0\fs20\par
+\par
+An example period according to the ISO 8061 standard (\cf4\ul http://en.wikipedia.org/wiki/ISO_8601\cf0\ulnone ) is:\par
+2012-06-18T22:54:15.000\cf3 Z\cf0 /2012-06-19/\par
+Z ("zero meridian") defines a UTC time instead of local time (old and depricated name for it was GMT):\par
+\cf4\ul http://www.cl.cam.ac.uk/~mgk25/iso-time.html\cf0\ulnone :\par
+\i Without any further additions, a date and time as written above is assumed to be in some local time zone. In order to indicate that a time is measured in Universal Time (UTC), you can append a capital letter Z to a time.\i0\par
+\par
+Time zone is marked like this: 2012-08-13T17:10:48+02\cf3 :00\cf0  for Finland (or +03 when using daylight saving time).\par
+\par
+See also \cf4\ul http://www.w3.org/TR/NOTE-datetime\cf0\ulnone  and \cf4\ul http://www.ietf.org/rfc/rfc3339.txt\cf0\ulnone .\par
+\par
+\ul\b\fs24 Authenticating users\ulnone\b0\fs20\par
+\par
+We protect the service for unauthorized use with HTTP BASIC authentication. The roles, users and passwords are defined in the file C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\\b tomcat-users.xml\b0 . Add the authentication header field to the requests made by client software when accessing the service. The field contains both the user name and password. When using a Web browser, a login popup will appear when trying to access a protected resource in the ActivityLogger service.\par
+\par
+Since the URL (and login credentials in BASIC authetication) are visible to all, the connection uses also SSL (HTTPS) to hide user specific confidental data from eavesdropping.\par
+\par
+See HTTPS and Basic HTTP authentication:\par
+\par
+\cf4\ul http://hc.apache.org/httpcomponents-client-ga/tutorial/html/authentication.html\cf0\ulnone\par
+\par
+\cf4\ul http://www.ietf.org/rfc/rfc2617.txt\cf0\ulnone :\par
+\par
+\cf5\i 2 Basic Authentication Scheme\par
+\par
+   The "basic" authentication scheme is based on the model that the\par
+   client must authenticate itself with a user-ID and a password for\par
+   each realm.  The realm value should be considered an opaque string\par
+   which can only be compared for equality with other realms on that\par
+   server. The server will service the request only if it can validate\par
+   the user-ID and password for the protection space of the Request-URI.\par
+   There are no optional authentication parameters.\par
+\par
+   For Basic, the framework above is utilized as follows:\par
+\par
+      challenge   = "Basic" realm\par
+      credentials = "Basic" basic-credentials\par
+\par
+   Upon receipt of an unauthorized request for a URI within the\par
+   protection space, the origin server MAY respond with a challenge like\par
+   the following:\par
+\par
+      WWW-Authenticate: Basic realm="WallyWorld"\par
+\par
+   where "WallyWorld" is the string assigned by the server to identify\par
+   the protection space of the Request-URI. A proxy may respond with the\par
+   same challenge using the Proxy-Authenticate header field.\par
+\par
+   To receive authorization, the client sends the userid and password,\par
+   separated by a single colon (":") character, within a base64 [7]\par
+   encoded string in the credentials.\par
+\par
+      basic-credentials = base64-user-pass\par
+      base64-user-pass  = <base64 [4] encoding of user-pass,\par
+                                     except not limited to 76 char/line>\par
+      user-pass   = userid ":" password\par
+      userid      = *<TEXT excluding ":">\par
+      password    = *TEXT\par
+\par
+   Userids might be case sensitive.\par
+\par
+   If the user agent wishes to send the userid "Aladdin" and password\par
+   "open sesame", it would use the following header field:\par
+\par
+      Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==\par
+\par
+   A client SHOULD assume that all paths at or deeper than the depth of\par
+   the last symbolic element in the path field of the Request-URI also\par
+   are within the protection space specified by the Basic realm value of\par
+   the current challenge. A client MAY preemptively send the\par
+   corresponding Authorization header with requests for resources in\par
+   that space without receipt of another challenge from the server.\par
+   Similarly, when a client sends a request to a proxy, it may reuse a\par
+   userid and password in the Proxy-Authorization header field without\par
+   receiving another challenge from the proxy server. See section 4 for\par
+   security considerations associated with Basic authentication.\i0\par
+\cf0\par
+\ul\b\fs24 An example REST URL\ulnone\b0\fs20\par
+\par
+http://<server>:<port>/<application>/rest/[<device_name>/][/<REST path>][?<parameters>]\par
+\par
+https://localhost.8080/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27%2B02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-10-19\par
+\par
+\ul\b\fs24 A response to a REST HTTP GET/POST request\ulnone\b0\fs20\par
+\par
+\cf6 This is the chosen set of responses (those marked with ? are still unimplemented):\par
+\par
+200 OK\tab\tab\tab\tab Normal response (everything ok, data may be availbale in the response body).\par
+201 Created\tab\tab\tab After POST. Returns created resource URL in the Location HTTP header field.\par
+\cf0 204 No Content\tab\tab\tab After DELETE?\cf6\par
+401 Unauthorized\tab\tab Authentication credentials missing or wrong. The response may contain an authentication\par
+\tab\tab\tab\tab challenge as specified by the HTTP protocol.\par
+403 Forbidden\tab\tab\tab A successfully authenticated user has not suitable access rights to the chosen resource.\par
+404 Not Found\tab\tab\tab URL or data resource was not found.\par
+405 Method Not Allowed\tab\tab POST, PUT ja DELETE request was made to URL not supporting those methods\par
+\tab\tab\tab\tab (Allow fied in the HTTP response headers will contain th elist of allowed methods).\par
+406 Not Acceptable\tab\tab The HTTP request Accept field does not contain */*, application/json, text/html, text/xml or\par
+\tab\tab\tab\tab text/plain.\par
+500 Internal Server Error\tab\tab Application or database error (may also mean that the request data was invalid).\par
+\par
+501 Not Implemented\tab\tab Response to the PUT and DELETE HTTP requests. OPTIONS and HEAD are automatically\par
+\tab\tab\tab\tab supported if GET is supported.\par
+503 Service Unavailable\tab\tab If the server is under heavy load?\par
+\par
+415 Unsupported Media Type\tab The body of the POST request is not JSON?\par
+422 Unprocessable Entity\tab If there is an error in processing the JSON data (e.g. wrong fields).\par
+\par
+\cf4\ul http://microformats.org/wiki/rest/urls\cf0\ulnone\par
+\cf4\ul\par
+http://en.wikipedia.org/wiki/List_of_HTTP_status_codes\cf0\ulnone\par
+\par
+HTTP response codes:\par
+200 OK\tab\tab\tab\tab Responses to the successful GET requests.\par
+201 Created\tab\tab\tab POST: Returns a new URL in the location header field.\par
+400 Bad Request\par
+401 Unauthorized\par
+403 Forbidden\par
+404 Not Found\par
+405 Method Not Allowed\par
+406 Not Acceptable\par
+415 Unsupported Media Type\tab If an error in parsing the payload JSON.\par
+422 Unprocessable Entity\par
+500 Internal Server Error\par
+501 Not Implemented\par
+503 Service Unavailable\par
+\par
+\cf4\ul https://cosm.com/docs/v2/?pachube_redirect=true\cf0\ulnone\par
+\par
+Common status codes include:\par
+* 200 OK: request processed successfully.\par
+* 401 Not Authorized: either you need to provide authentication credentials, or the credentials provided aren't valid.\par
+* 403 Forbidden: Cosm understands your request, but refuses to fulfill it. An accompanying error message should explain why.\par
+* 404 Not Found: either you're requesting an invalid URI or the resource in question doesn't exist (eg. no such feed).\par
+* 422 Unprocessable Entity: Cosm was unable to create a feed because the EEML/JSON was not complete/valid (e.g. it didn't include a "title" element).\par
+* 500 Internal Server Error: Something went wrong... Please post to the forum about it and we will investigate.\par
+* 503 No server error: usually occurs when there are too many requests coming into Cosm - if you get this from an API request then the error message will be returned in XML in the response.\par
+\par
+\tab\tab\ul\fs32 STORING DATA TO THE ROUTINE DATABASE\ulnone\fs20\par
+\par
+\fs28\tab USING DATABASE FROM TOMCAT\fs20\par
+\par
+Tomcat 6 running on some HTTP port in Linux. Configurations and access logs enabled (substitute real password for *):\par
+\par
+/home/routine/apache-tomcat-6.0.35/conf/server.xml\par
+\par
+<!-- PostgreSQL database driver -->\par
+           <Realm className="org.apache.catalina.realm.JDBCRealm"\par
+                 driverName="org.postgresql.Driver"\par
+              connectionURL="jdbc:postgresql://localhost:5432/routine_db"\par
+             connectionName="routine" connectionPassword="*"\par
+                   username="routine"\par
+                   password="*"\par
+                  />\par
+\par
+context.xml:\par
+\par
+/home/routine/apache-tomcat-6.0.35/conf/context.xml\par
+\par
+<Context privileged="true" reloadable="true">\par
+\par
+<Resource name="jdbc/postgres" auth="Container"\par
+          type="javax.sql.DataSource" driverClassName="org.postgresql.Driver"\par
+          url="jdbc:postgresql://localhost:5432/routine_db"\par
+          username="routine" password="*" maxActive="20" maxIdle="10" maxWait="-1"\par
+        removeAbandoned="true"\par
+        removeAbandonedTimeout="600"\par
+        logAbandoned="true"\par
+        />\par
+\par
+Database driver:\par
+\par
+/home/routine/apache-tomcat-6.0.35/lib/postgresql-8.4-701.jdbc4.jar \par
+\par
+\fs28\tab REMOTE ACCESS TO THE DATABASE USING PUTTY\fs20\par
+\par
+In the developing phase we had the PostgreSQL DB and Tomcat running on a Linux server while the coding happened on a Windows workstation in the same network. There was also a local Tomcat instance that used the remote PostgreSQL database via an SSH port.\par
+\par
+By using PuTTY we created an SSH port 5432 connection to the external server where the PostgreSQL was installed.\par
+\par
+For pgAdmin and DB driver the connection was then defines as:\par
+server:5432\tab routine, *\tab (PostgreSQL account)\par
+\par
+\ul\b\fs24 PuTTY Configuration\ulnone\b0\fs20\par
+\par
+Session\par
+\tab Host name (or IP address):\tab your server address \par
+\tab Port:\tab\tab\tab\tab 22\par
+\tab Connection type:\tab\tab SSH\tab (Raw,Telnet,Rlogin,SSH,Serial)\par
+\tab Saved sessions\par
+\tab\tab "PostgreSQL x.x DB server at port 5432"\par
+\tab Close window on exit\par
+\tab\tab   Always\tab o Never\tab\tab   Only on clean exit\par
+\tab Logging\par
+\tab\tab Session logging\par
+\tab\tab\tab   None\par
+\tab\tab\tab o Printable output\par
+\tab\tab\tab   All session output\par
+\tab\tab\tab   SSH packets\par
+\tab\tab\tab   SSH packets and raw data\par
+\tab\tab Log file name:\tab D:\\Data\\PostgreSQL\\x.x\\PuTTY logs\\&Y-&M-&D &T &H putty.log\par
+\tab\tab What to do if the log file already exists:\par
+\tab\tab   Always overwrite it\par
+\tab\tab   Always append to the end of it\par
+\tab\tab o Ask the user every time\par
+\tab\tab v Flush log file frequently\par
+\tab\tab Options specific to SSH packet logging:\par
+\tab\tab v Omit known password fields\par
+\tab\tab   Omit session data\par
+Terminal\par
+\tab Keyboard\par
+\tab Bell\par
+\tab Features\par
+Window\par
+\tab Set the size of the window:\tab columns 100\tab rows 26\par
+\tab\tab When window is resized:\par
+\tab\tab o Change the number of rows and columns\par
+\tab\tab   Change the size of the font\par
+\tab\tab   Change font size only when maximized\par
+\tab\tab   Forbid resizing completely\par
+\tab Control the scrollback in the window\par
+\tab\tab Lines of scrollback\tab 2000\par
+\tab\tab v Display scrollbar\par
+\tab\tab   Display scrollbar in full screen mode\par
+\tab\tab   Reset scrollbar on keypress\par
+\tab\tab v Reset scrollback on display activity\par
+\tab\tab v Push erased text into scrollback\par
+\tab Appearance\par
+\tab Behaviour\par
+\tab Translation\par
+\tab Selection\par
+\tab Colours\par
+Connection\par
+\tab Data\par
+\tab Proxy\par
+\tab\tab Proxy type\par
+\tab\tab\tab o None\tab   SOCKS 4\tab   SOCKS 5\par
+\tab\tab\tab   HTTP\tab   Telnet\tab   Local\par
+\tab\tab Proxy hostname:\tab proxy\tab Port:\tab 80\par
+\tab\tab Exclude hosts/IPs:\tab\par
+\tab\tab [ ] Consider proxying local host connections\par
+\tab\tab Do DNS name lookup at proxy end\par
+\tab\tab   No\tab o Auto\tab   Yes\par
+\tab\tab Username:\tab\par
+\tab\tab Password:\par
+\tab\tab Telnet command, or local proxy command:\par
+\tab\tab\tab connect %host %port\\n\par
+\tab Telnet\par
+\tab Rlogin\par
+\tab SSH\par
+\tab\tab Tunnels\par
+\tab\tab\tab Port forwarding\par
+\tab\tab\tab [ ] Local ports accept connections from other hosts\par
+\tab\tab\tab [ ] Remote ports do the same (SSH-2 only)\par
+\tab\tab\tab Forwarded ports:\par
+\tab\tab\tab Add new forwarded port:\par
+\tab\tab\tab\tab Source port\tab 5432\par
+\tab\tab\tab\tab Destination\tab localhost:5433\par
+\tab\tab\tab\tab o Local\tab\tab   Remote\tab   Dynamic\par
+\tab\tab\tab\tab o Auto\tab\tab   IPv4\tab\tab   IPv6\par
+\tab\tab\tab [Add]\tab =>\tab L5432\tab localhost:5432\par
+\tab Serial\par
+[Open]\par
+=>\par
+"The server's host key is not cached in the registry. ...\par
+ The server's rsa2 key fingerprint is:\par
+<SSH RSA FINGERPRINT>\par
+ ...connection."\par
+[Yes]\tab Trust connection always if the fingerprint is that of the remote connection on the server.\par
+\par
+\fs28\tab DATABASE STRUCTURE\fs20\par
+\par
+Database name is \i routine_db\i0  and its user is \i routine\i0 .\par
+\f1\par
+\par
+\ul\b\f0\fs24 Database schema (\i create_routine_tables.sql\i0 )\ulnone\b0\fs20\par
+\par
+\b\i\fs22 create_routine_tables.sql\b0\i0\fs20\par
+\f1\par
+\f2\fs16 -- create tables script, usage: \par
+-- psql -U routine -d routine_db -f create_routine_tables.sql\par
+\par
+-- \par
+-- mobile country codes\par
+-- \par
+CREATE TABLE mccs (\par
+    mcc              integer UNIQUE NOT NULL, -- mobile country code (e.g 244)\par
+    abbr             text    NOT NULL,        -- 2 characters abbreviation of country code (FI)\par
+    name             text    NOT NULL         -- human readable country name (Finland)\par
+);\par
+\par
+\par
+-- \par
+-- user's device\par
+-- \par
+CREATE TABLE devices (\par
+    device_id                 bigserial PRIMARY KEY,\par
+    device_name               text      DEFAULT 'Default user'::text NOT NULL,     -- hex presentation of device hash "0896e92e6f44d1c701cac642ca3e66ebe199caea"\par
+    platform                  text      DEFAULT 'Default platform'::text NOT NULL, -- platform (e.g "Android 2.3")\par
+    device_creation_timestamp timestamp with time zone DEFAULT now() NOT NULL,     -- device creation timestamp\par
+    mcc                       integer   REFERENCES mccs(mcc)\par
+);\par
+\par
+\par
+\par
+-- \par
+-- logger application name & identifiers. (We can have multiple different logger applications\par
+-- e.g. "RoutineLogger", "3rd party foo logger" ...)\par
+-- \par
+CREATE TABLE logger_applications (\par
+    logger_application_id   bigserial PRIMARY KEY,\par
+    logger_application_name text      DEFAULT 'Default_routine_log'::text NOT NULL -- "mylogger", "routinelogger" ...\par
+);\par
+\par
+\par
+-- \par
+-- application (describing one application running in the device)\par
+-- \par
+CREATE TABLE application (\par
+    application_id      bigserial PRIMARY KEY,\par
+    application_name    text      NOT NULL,        -- application name in the device "Web browser"\par
+    package_class_name  text      NOT NULL,        -- java package and class name (company.foo.bar)\par
+\tab UNIQUE (application_name, package_class_name)  -- \par
+);\par
+\par
+\par
+-- \par
+-- raw measurements, basic data\par
+-- \par
+CREATE TABLE raw_measurements (\par
+    measurement_id           bigserial PRIMARY KEY,\par
+    measurement_timestamp    timestamp with time zone DEFAULT now() NOT NULL,                 -- time stamp of measurement\par
+    latitude                 double precision,                                                -- GPS latitude if available\par
+    longitude                double precision,                                                -- GPS longitude if available\par
+    cell_id                  integer DEFAULT (-1) NOT NULL,                                   -- default value -1 == no data \par
+    logger_application_id_fk bigserial REFERENCES logger_applications(logger_application_id), -- from which logger application the data is from?\par
+    device_id_fk             bigserial REFERENCES devices(device_id)                          -- each measurement must belong to only one device\par
+);\par
+\par
+\par
+-- \par
+-- map raw application information to raw_measurements.measurement_id and to application.application_id \par
+-- \par
+CREATE TABLE measurement_applications (\par
+    measurement_applications_id bigserial PRIMARY KEY,                                 -- \par
+\tab measurement_id_fk           bigserial REFERENCES raw_measurements(measurement_id), -- for which user_measurement does this data belong to?\par
+    application_id_fk           bigserial REFERENCES application(application_id)       -- which application\par
+-- Do we really need following two? removed for now\par
+--    launch_time                 text   NOT NULL,\par
+--    checked                     boolean DEFAULT false  \par
+);\par
+\par
+-- ???\par
+-- ADD CONSTRAINT user_application_list_fk FOREIGN KEY (user_application_list) REFERENCES user_measurements(user_application_list);\par
+\par
+-- \par
+-- routine_classes table & define valid enum or routine_class_id types\par
+-- \par
+CREATE TABLE routine_classes (\par
+    id                 bigserial PRIMARY KEY,\par
+    routine_type_id    integer,                                -- 0 == location, 1 == application, 2 == user defined ?\par
+    routine_class_name text      NOT NULL,                     -- human readable name of routine?\par
+    owner_device_id_fk bigserial REFERENCES devices(device_id) -- because every user/device may have different class ids and class names\par
+-- constraints, or should we constraint the routine_class_id at all? CHECK(routine_class_id >= 0 AND routine_class_id <= 2)\par
+);\par
+\par
+\par
+-- \par
+-- user's routines\par
+-- Note that if we force application_id_fk like following, it also means that routines cannot have zero apps\par
+-- \par
+CREATE TABLE user_routines (\par
+    user_routines_id      bigserial PRIMARY KEY,\par
+    start_time            timestamp with time zone NOT NULL,                 -- routine start time\par
+    end_time              timestamp with time zone NOT NULL,                -- routine end time\par
+    routine_class_id_fk   bigserial REFERENCES routine_classes(id),         -- these routine applications belong to referenced routine_class\par
+    application_id_fk     bigserial REFERENCES application(application_id), -- which application\par
+    raw_measurement_id_fk bigserial REFERENCES raw_measurements(measurement_id),\par
+    confidence            double precision DEFAULT(1.0) NOT NULL,           -- range [0.0, 1.0], 1.0 == full confidence\par
+    CHECK(confidence >= 0.0 AND confidence <= 1.0),\par
+    CHECK(start_time < end_time)\par
+);\f1\fs20\par
+\par
+See also the picture \i erd_activitylogger.png\i0 .\par
+\par
+\par
+\ul\b\f0\fs24 Test data\ulnone\b0\fs20\par
+\par
+\f1 See the file \i routine_db_2012-10-03_test_values_backup.sql\i0  for a short set of different kinds of user routine records. They are designed to be tested with the links on the start page \i index.html\i0  of the \b ActivityLogger\b0  REST service. The \i mccs\i0  table contains mobile location codes that are always needed for location name lookup (the table is never modified).\par
+\par
+\ul\b\f0\fs24 Storing timestamps into the database\ulnone\b0\fs20\par
+\par
+SQL Server (\cf4\ul http://www.sql-server-helper.com/tips/date-formats.aspx\cf0\ulnone ):\par
+\fs16 Date Format\tab\tab\tab Standard\tab SQL Statement\tab\tab\tab\tab\tab Sample Output\fs20\par
+\fs16 YYYY-MM-DDTHH:MM:SS:MMM  \tab ISO8601  \tab SELECT CONVERT(VARCHAR(23), GETDATE(), 126)  \tab 1998-11-23T11:25:43:250\fs20\par
+\par
+\b\fs22 PostgreSQL\b0\fs20\par
+\par
+\cf4\ul http://stackoverflow.com/questions/6151084/which-timestamp-type-to-choose-in-a-postgresql-database\par
+\cf0\ulnone\par
+A safe way to create a timestamp in PostgeSQL. It is stored as UTC internally and presented to the database user according to her time zone and locale.\par
+\par
+\f2\fs16 CREATE TABLE my_tbl (\par
+  my_timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),\par
+  CHECK(EXTRACT(TIMEZONE FROM my_timestamp) = '0')\par
+);\par
+test=> SET timezone = 'America/Los_Angeles';\par
+SET\par
+test=> INSERT INTO my_tbl (my_timestamp) VALUES (NOW());\par
+ERROR:  new row for relation "my_tbl" violates check constraint "my_tbl_my_timestamp_check"\par
+test=> SET timezone = 'UTC';\par
+SET\par
+test=> INSERT INTO my_tbl (my_timestamp) VALUES (NOW());\par
+INSERT 0 1\par
+\par
+\f1\fs20 America/Los_Angeles is UTC-07 (depending on day light saving time, the name takes those into account while absolute numbers must be checked by the user/application; see also \cf4\ul http://en.wikipedia.org/wiki/List_of_tz_database_time_zones\cf0\ulnone ):\f2\fs16\par
+\par
+-- Make sure we're all working off of the same local time zone\par
+test=> SET timezone = 'America/Los_Angeles';\par
+SET\par
+test=> SELECT NOW();\par
+              now              \par
+-------------------------------\par
+ 2011-05-27 15:47:58.138995-07\par
+(1 row)\par
+\par
+test=> SELECT NOW() AT TIME ZONE 'UTC';\par
+          timezone          \par
+----------------------------\par
+ 2011-05-27 22:48:02.235541\par
+(1 row)\par
+\par
+test=> SELECT EXTRACT(TIMEZONE_HOUR FROM NOW());\par
+ date_part \par
+-----------\par
+        -7\par
+(1 row)\par
+\par
+\f1\fs20 Extracting time zone from a timestamp:\f2\fs16\par
+\par
+test=> SELECT EXTRACT(TIMEZONE_HOUR FROM TIMESTAMP WITH TIME ZONE '2011-05-27 22:48:02.235541');\par
+ date_part \par
+-----------\par
+        -7\par
+(1 row)\par
+\par
+-- Now change to UTC    \par
+test=> SET timezone = 'UTC';\par
+SET\par
+test=> SELECT NOW();\par
+              now              \par
+-------------------------------\par
+ 2011-05-27 22:48:40.540119+00\par
+(1 row)\par
+\par
+test=> SELECT NOW() AT TIME ZONE 'UTC';\par
+          timezone          \par
+----------------------------\par
+ 2011-05-27 22:48:49.444446\par
+(1 row)\par
+\par
+test=> SELECT EXTRACT(TIMEZONE_HOUR FROM NOW());\par
+ date_part \par
+-----------\par
+         0\par
+(1 row)\par
+\par
+test=> SELECT EXTRACT(TIMEZONE_HOUR FROM TIMESTAMP WITH TIME ZONE '2011-05-27 22:48:02.235541');\par
+ date_part \par
+-----------\par
+         0\par
+(1 row)\par
+\par
+\f1\fs20 A surprising result is received when an incomplete timestamp is entered:\f2\fs16\par
+\par
+test=> SET timezone = 'America/Los_Angeles';\par
+SET\par
+test=> SELECT '2011-05-11'::DATE AT TIME ZONE 'UTC';\par
+      timezone       \par
+---------------------\par
+ 2011-05-11 07:00:00\par
+(1 row)\par
+\par
+test=> SET timezone = 'UTC';\par
+SET\par
+test=> SELECT '2011-05-11'::DATE AT TIME ZONE 'UTC';\par
+      timezone       \par
+---------------------\par
+ 2011-05-11 00:00:00\par
+(1 row)\f0\fs20\par
+\par
+\cf4\ul http://stackoverflow.com/questions/9772825/postgresql-alter-type-timestamp-without-time-zone-with-time-zone\cf0\ulnone\par
+\par
+\par
+This demonstrates how the internal timestamp of the database is always UTC (the example user is probably from America):\par
+\par
+\f2\fs16 create table a(t timestamp without time zone, t2 timestamp with time zone);\par
+insert into a(t) values ('2012-03-01'::timestamp);\par
+update a set t2 = t;\par
+select * from a;\par
+          t          |           t2           \par
+---------------------+------------------------\par
+ 2012-03-01 00:00:00 | 2012-03-01 00:00:00-08\par
+\par
+alter table a alter column t type timestamp with time zone;\par
+select * from a;\par
+           t            |           t2           \par
+------------------------+------------------------\par
+ 2012-03-01 00:00:00-08 | 2012-03-01 00:00:00-08\f0\fs20\par
+\par
+\b\fs22 Timezones\b0\fs20\par
+\par
+\cf4\ul http://www.postgresql.org/docs/x.x/static/functions-datetime.html\cf0\ulnone\par
+\par
+timestamp with time zone AT TIME ZONE zone\tab =>\tab timestamp without time zone\par
+Converts given time stamp with time zone to the new time zone, with no time zone designation visible afterwards.\par
+\par
+\f2\fs16 SELECT TIMESTAMP WITH TIME ZONE '2001-02-16 20:38:40-05' AT TIME ZONE 'MST';\par
+Result: 2001-02-16 18:38:40\f0\fs20\par
+\par
+\cf5 In these expressions, the desired time zone zone can be specified either as a text string (e.g., 'PST') or as an interval (e.g., INTERVAL '-08:00').\cf0\par
+\par
+These forms shoul dalso work: \cf7\strike\f1 '-700'\cf0\strike0\f0  ja '+3'\par
+(\cf4\ul http://dba.stackexchange.com/questions/16036/compare-a-date-and-a-timestamp-with-time-zone-with-now-in-the-same-query\cf0\ulnone ).\par
+\par
+pgAdmin (Query tool) tests:\par
+\par
+SELECT NOW() AT TIME ZONE 'UTC';\tab "2012-08-14 21:30:14.907"\tab 2012-08-14T21:30:14.907Z\tab (ISO 8601)\par
+SELECT NOW() AT TIME ZONE '-2';\tab "2012-08-14 23:28:52.154"\tab Finnish winter time (= time zone GMT +02:00).\par
+SELECT NOW() AT TIME ZONE '-02';\tab "2012-08-14 23:33:27.557"\tab 2012-08-14T23:33:27.557+02\tab (ISO 8601)\par
+SELECT NOW() AT TIME ZONE '-02:00';\tab "2012-08-14 23:37:01.129"\par
+SELECT NOW()\tab\tab\tab\tab "2012-08-15 00:48:31.113+03"\par
+SELECT CURRENT_TIMESTAMP;\tab "2012-08-15 00:49:22.412+03"\par
+SELECT NOW() AT TIME ZONE INTERVAL '-02:00';\tab "2012-08-14 19:55:35.679"\par
+SELECT extract(epoch FROM now());\tab 1344981738.744\tab\tab\tab UNIX time (long) without decimals!\par
+SELECT EXTRACT(EPOCH FROM TIMESTAMP WITH TIME ZONE '2001-02-16 20:38:40-08');\tab 982384720\par
+set timezone = '-02'; select now();\tab "2012-08-14 20:31:52.854-02"\par
+set timezone = 'utc'; select now();\tab "2012-08-14 22:33:08.608+00"\par
+set timezone = '+2'; select now();\tab "2012-08-15 00:33:49.781+02"\tab Finnish winter time.\par
+set timezone = 'Europe/Helsinki'; select now();\tab "2012-08-15 01:38:01.23+03"\tab The actual time in Finland (incl. DST).\par
+SELECT CURRENT_TIMESTAMP(0)\tab "2012-08-16 13:46:26+03"\tab Truncate decimals.\par
+select current_timestamp::timestamp(0);\tab "2012-08-16 13:47:43"\tab\tab Alternative way.\par
+SELECT now()::timestamp(0);\tab\tab "2012-08-16 14:27:19"\par
+SELECT now()::timestamp(3) with time zone;\tab "2012-12-08 02:05:48.633+02"\tab How many decimals.\par
+\par
+\cf8 SELECT TIMESTAMP WITH TIME ZONE '2012-08-16T13:28:56+00'\tab "2012-08-16 16:28:56+03"\tab timestampz\par
+The letter T in ISO 8601 form is optional. The result is given in the user time zone (Finland for me). \b PostgreSQL understands the ISO-8601 form as it is.\cf0\b0\par
+\par
+\b SQL injection attack attempt:\b0\par
+\par
+SELECT now()::timestamp(0) with time zone;\tab\tab\tab\tab\tab\tab "2012-10-24 15:41:56+03"\par
+SELECT '2012-08-15\cf3 T\cf0 01:38:01.23+03'::timestamp(0) with time zone;\tab\tab\tab "2012-08-15 01:38:01+03"\par
+SELECT now() >= '2012-08-15 01:38:01.23+03'::timestamp(0) with time zone;\tab\tab t (boolean)\par
+\par
+SELECT now() >= ';SELECT * FROM devices;2012-08-15 01:38:01.23+03'::timestamp(0) with time zone;\par
+=>\par
+ERROR:  invalid input syntax for type timestamp with time zone: ";SELECT * FROM devices;2012-08-15 01:38:01.23+03"\par
+LINE 1: SELECT now() >= ';SELECT * FROM devices;2012-08-15 01:38:01....\par
+\par
+Always use in the code \cf1\highlight9\f4 preparedStatement.setString(1, deviceName);\cf0\highlight0\f0\par
+kind requests when inserting strings into SQL whether you are inserting an id or a timestamp.\par
+\par
+\cf4\ul http://www.postgresql.org/docs/x.x/static/datatype-datetime.html#DATATYPE-TIMEZONES\cf0\ulnone\par
+\par
+\cf5 PostgreSQL allows you to specify time zones in three different forms:\par
+\par
+A full time zone name, for example America/New_York. The recognized time zone names are listed in the pg_timezone_names view (see Section 45.67). PostgreSQL uses the widely-used zoneinfo time zone data for this purpose, so the same names are also recognized by much other software.\par
+\par
+A time zone abbreviation, for example PST. Such a specification merely defines a particular offset from UTC, in contrast to full time zone names which can imply a set of daylight savings transition-date rules as well. The recognized abbreviations are listed in the pg_timezone_abbrevs view (see Section 45.66). You cannot set the configuration parameters timezone or log_timezone to a time zone abbreviation, but you can use abbreviations in date/time input values and with the AT TIME ZONE operator.\par
+\par
+In addition to the timezone names and abbreviations, PostgreSQL will accept POSIX-style time zone specifications of the form STDoffset or STDoffsetDST, where STD is a zone abbreviation, offset is a numeric offset in hours west from UTC, and DST is an optional daylight-savings zone abbreviation, assumed to stand for one hour ahead of the given offset. For example, if EST5EDT were not already a recognized zone name, it would be accepted and would be functionally equivalent to United States East Coast time. When a daylight-savings zone name is present, it is assumed to be used according to the same daylight-savings transition rules used in the zoneinfo time zone database's posixrules entry. In a standard PostgreSQL installation, posixrules is the same as US/Eastern, so that POSIX-style time zone specifications follow USA daylight-savings rules. If needed, you can adjust this behavior by replacing the posixrules file.\cf0\par
+\par
+\cf4\ul http://postgres.cz/wiki/PostgreSQL_SQL_Tricks#Timestamp_recalculation_for_different_timezone_and_its_indexing\cf0\ulnone\par
+\par
+\b Timestamp recalculation for different timezone and its indexing\b0\par
+\par
+The simplest specification of time at some timezone is using AT TIME ZONE operator. We can't indexing timestamp with timezone, because we can change current timezone, so we can create index only for timestamp at some specified timezone. Source: pgsql-general, Tom Lane\par
+\par
+\f2\fs16 CREATE INDEX created_tz_paris ON data((created_on AT TIME ZONE 'Europe/Paris'));\f0\fs20\par
+\par
+\b\fs22 How to return a timestamp to the client application\b0\fs20\par
+\par
+1. Store client time zone into the DB.\tab\tab\tab Difficult to keep updated. Error prone.\par
+2. All timestamps come with the time zone specification.\tab More work but unambiguous. Responses are always in UTC.\par
+3. All timestamps are UTC but we ignoret he time zone.\tab Less work but causes confusion in logs.\par
+4. The client always send his timestamp in requests.\tab The server can deduce the client's time zone.\par
+\par
+The current implementation uses method 2 except that the responses are in the DB time zone.\par
+Method 4 with explicit time zone specification as \f5\fs26\'b1\f0\fs20 nn would be preferred.\par
+\par
+\b\fs22 ISO 8601 Internet date/time format\b0\fs20\par
+\par
+We wanted to define a PostgeSQL function that outputs an ISO 8601 Internet timestamp string from a UTC timestamp and time zone.\par
+\par
+\cf4\ul http://postgresql.1045698.n5.nabble.com/Format-string-for-ISO-8601-date-and-time-td1910959.html\cf0\ulnone\par
+\par
+\f2\fs16 SELECT to_char( NOW(), 'YYYY-MM-DD')\par
+ || 'T'\par
+ || to_char( NOW(), 'HH24:MI:SS')\par
+ || to_char(extract('timezone_hour' from NOW()),'S00')\par
+ ||':'\par
+ || to_char(extract('timezone_minute' from NOW()),'FM00');\f0\fs20\par
+=>\par
+\f2\fs16 "2012-08-15T01:09:17+03:00"\f0\fs20\par
+\par
+\b Testing\b0\par
+\par
+\f2\fs16 CREATE OR REPLACE FUNCTION convert_tz(dt timestamp, from_tz text, to_tz text)\par
+RETURNS timestamp AS $$\par
+SELECT ($1 AT TIME ZONE $2) AT TIME ZONE $3;\par
+$$ LANGUAGE sql;\par
+\par
+SELECT ( CURRENT_TIMESTAMP(0)::timestamp ,\par
+         convert_tz( CURRENT_TIMESTAMP(0)::timestamp,'-02','UTC') );\f0\fs20\par
+\par
+=> "("2012-08-16 15:13:59","2012-08-16 13:13:59")"\par
+The first value is the correct Finnish time (because the DB time zone has been set to 'Europe/Helsinki').\par
+\par
+\b The final function\b0\par
+\par
+\f2\fs16 CREATE OR REPLACE FUNCTION\par
+iso8061_internet_timestamp(ts timestamptz, z integer) RETURNS text AS $$\par
+ SELECT to_char( $1, 'YYYY-MM-DD')\par
+ || 'T'\par
+ || to_char( $1 at time zone cast(-$2 as text), 'HH24:MI:SS')\par
+ || to_char($2,'S00')\par
+ AS result;\par
+$$ LANGUAGE SQL;\par
+\par
+SELECT now() , iso8061_internet_timestamp( current_timestamp(0), 3);\par
+\f0\fs20 => "2012-08-16 16:27:32.005+03";"2012-08-16T16:27:32+03"\tab Nice conversion into Finnish summer time (UTC+3).\par
+\par
+\f2\fs16 SELECT now() , iso8061_internet_timestamp( current_timestamp(0), 0);\f0\fs20\par
+=> "2012-08-16 16:28:56.583+03";"2012-08-16T13:28:57+00"\tab Convert to UTC.\par
+\par
+\f2\fs16 SELECT iso8061_internet_timestamp('2012-08-16 16:28:56.583+03',0);\f0\fs20\par
+=> "2012-08-16T13:28:56+00"\par
+Comverts a timestamp given as text into the desired time zone (here UTC).\par
+\par
+If you create the function with the Query tool in the pgAdminin, it will be saved into the database Schema.\par
+\f2\fs16 ____________________________________________________________________________________________________________\f0\fs20\par
+\par
+\b\f2\fs16 C:\\Program Files\\PostgreSQL\\x.x\\bin>pg_dump -U postgres -p 5433 -s -c -O -v routine_db > routine_db_2012_08_16-schema.sql\b0\par
+Password:\par
+pg_dump: reading schemas\par
+pg_dump: reading user-defined functions\par
+pg_dump: reading user-defined types\par
+pg_dump: reading procedural languages\par
+pg_dump: reading user-defined aggregate functions\par
+pg_dump: reading user-defined operators\par
+pg_dump: reading user-defined operator classes\par
+pg_dump: reading user-defined text search parsers\par
+pg_dump: reading user-defined text search templates\par
+pg_dump: reading user-defined text search dictionaries\par
+pg_dump: reading user-defined text search configurations\par
+pg_dump: reading user-defined foreign-data wrappers\par
+pg_dump: reading user-defined foreign servers\par
+pg_dump: reading default privileges\par
+pg_dump: reading user-defined operator families\par
+pg_dump: reading user-defined conversions\par
+pg_dump: reading user-defined tables\par
+pg_dump: reading table inheritance information\par
+pg_dump: reading rewrite rules\par
+pg_dump: reading type casts\par
+pg_dump: finding inheritance relationships\par
+pg_dump: reading column info for interesting tables\par
+pg_dump: finding the columns and types of table "mccs"\par
+pg_dump: flagging inherited columns in subtables\par
+pg_dump: reading indexes\par
+pg_dump: reading constraints\par
+pg_dump: reading triggers\par
+pg_dump: reading dependency data\par
+pg_dump: saving encoding = UTF8\par
+pg_dump: saving standard_conforming_strings = off\par
+pg_dump: saving database definition\par
+pg_dump: dropping TABLE mccs\par
+pg_dump: dropping FUNCTION iso8061_internet_timestamp(timestamp with time zone, integer)\par
+pg_dump: dropping FUNCTION convert_tz(timestamp without time zone, text, text)\par
+pg_dump: dropping PROCEDURAL LANGUAGE plpgsql\par
+pg_dump: dropping COMMENT SCHEMA public\par
+pg_dump: dropping SCHEMA public\par
+pg_dump: dropping COMMENT routine_db\par
+pg_dump: creating COMMENT routine_db\par
+pg_dump: creating SCHEMA public\par
+pg_dump: creating COMMENT SCHEMA public\par
+pg_dump: creating PROCEDURAL LANGUAGE plpgsql\par
+pg_dump: creating FUNCTION convert_tz(timestamp without time zone, text, text)\par
+pg_dump: creating FUNCTION iso8061_internet_timestamp(timestamp with time zone, integer)\par
+pg_dump: creating TABLE mccs\par
+pg_dump: setting owner and privileges for COMMENT routine_db\par
+pg_dump: setting owner and privileges for SCHEMA public\par
+pg_dump: setting owner and privileges for COMMENT SCHEMA public\par
+pg_dump: setting owner and privileges for ACL public\par
+pg_dump: setting owner and privileges for PROCEDURAL LANGUAGE plpgsql\par
+pg_dump: setting owner and privileges for FUNCTION convert_tz(timestamp without time zone, text, text)\par
+pg_dump: setting owner and privileges for FUNCTION iso8061_internet_timestamp(timestamp with time zone, integer)\par
+pg_dump: setting owner and privileges for TABLE mccs\par
+\par
+\b C:\\Program Files\\PostgreSQL\\x.x\\bin>type routine_db_2012_08_16-schema.sql\b0\par
+--\par
+-- PostgreSQL database dump\par
+--\par
+\par
+-- Dumped from database version 9.0.2\par
+-- Dumped by pg_dump version 9.0.2\par
+-- Started on 2012-08-16 16:51:34\par
+\par
+SET statement_timeout = 0;\par
+SET client_encoding = 'UTF8';\par
+SET standard_conforming_strings = off;\par
+SET check_function_bodies = false;\par
+SET client_min_messages = warning;\par
+SET escape_string_warning = off;\par
+\par
+SET search_path = public, pg_catalog;\par
+\par
+DROP TABLE public.mccs;\par
+DROP FUNCTION public.iso8061_internet_timestamp(ts timestamp with time zone, z integer);\par
+DROP FUNCTION public.convert_tz(dt timestamp without time zone, from_tz text, to_tz text);\par
+DROP PROCEDURAL LANGUAGE plpgsql;\par
+DROP SCHEMA public;\par
+--\par
+-- TOC entry 1783 (class 1262 OID 16467)\par
+-- Dependencies: 1782\par
+-- Name: routine_db; Type: COMMENT; Schema: -; Owner: -\par
+--\par
+\par
+COMMENT ON DATABASE routine_db IS 'Routine database, created 15.8.2012';\par
+\par
+\par
+--\par
+-- TOC entry 5 (class 2615 OID 2200)\par
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -\par
+--\par
+\par
+CREATE SCHEMA public;\par
+\par
+\par
+--\par
+-- TOC entry 1784 (class 0 OID 0)\par
+-- Dependencies: 5\par
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -\par
+--\par
+\par
+COMMENT ON SCHEMA public IS 'standard public schema';\par
+\par
+\par
+--\par
+-- TOC entry 310 (class 2612 OID 11574)\par
+-- Name: plpgsql; Type: PROCEDURAL LANGUAGE; Schema: -; Owner: -\par
+--\par
+\par
+CREATE OR REPLACE PROCEDURAL LANGUAGE plpgsql;\par
+\par
+\par
+SET search_path = public, pg_catalog;\par
+\par
+--\par
+-- TOC entry 18 (class 1255 OID 16475)\par
+-- Dependencies: 5\par
+-- Name: convert_tz(timestamp without time zone, text, text); Type: FUNCTION; Schema: public; Owner: -\par
+--\par
+\par
+CREATE FUNCTION convert_tz(dt timestamp without time zone, from_tz text, to_tz text) RETURNS timestamp without time zone\par
+\par
+    LANGUAGE sql\par
+    AS $_$\par
+SELECT ($1 AT TIME ZONE $2) AT TIME ZONE $3;\par
+$_$;\par
+\par
+\par
+--\par
+-- TOC entry 19 (class 1255 OID 16480)\par
+-- Dependencies: 5\par
+-- Name: iso8061_internet_timestamp(timestamp with time zone, integer); Type: FUNCTION; Schema: public; Owner: -\par
+--\par
+\par
+CREATE FUNCTION iso8061_internet_timestamp(ts timestamp with time zone, z integer) RETURNS text\par
+    LANGUAGE sql\par
+    AS $_$\par
+ SELECT to_char( $1, 'YYYY-MM-DD')\par
+ || 'T'\par
+ || to_char( $1 at time zone cast(-$2 as text), 'HH24:MI:SS')\par
+ || to_char($2,'S00')\par
+ AS result;\par
+$_$;\par
+\par
+\par
+SET default_tablespace = '';\par
+\par
+SET default_with_oids = false;\par
+\par
+--\par
+-- TOC entry 1502 (class 1259 OID 16468)\par
+-- Dependencies: 5\par
+-- Name: mccs; Type: TABLE; Schema: public; Owner: -; Tablespace:\par
+--\par
+\par
+CREATE TABLE mccs (\par
+    mcc integer,\par
+    abbr text,\par
+    name text\par
+);\par
+\par
+\par
+--\par
+-- TOC entry 1785 (class 0 OID 0)\par
+-- Dependencies: 5\par
+-- Name: public; Type: ACL; Schema: -; Owner: -\par
+--\par
+\par
+REVOKE ALL ON SCHEMA public FROM PUBLIC;\par
+REVOKE ALL ON SCHEMA public FROM postgres;\par
+GRANT ALL ON SCHEMA public TO postgres;\par
+GRANT ALL ON SCHEMA public TO PUBLIC;\par
+\par
+\par
+-- Completed on 2012-08-16 16:51:41\par
+\par
+--\par
+-- PostgreSQL database dump complete\par
+--\par
+____________________________________________________________________________________________________________\f0\fs20\par
+\par
+These functions were never actually used in the ActivityLogger service but they might have been useful in a more advanced version of the service.\par
+\par
+\tab\tab\ul\fs32 THE SERVER AND THE DATABASE\ulnone\fs20\par
+\par
+- PostgreSQL.\par
+- Tomcat\par
+- Jersey REST API\par
+\par
+\fs28\tab CREATING, MANAGING, BACKING-UP AND USING THE DATABASE\fs20\par
+\par
+\ul\b\fs24 Database creation\ulnone\b0\fs20\par
+\par
+Database user:\par
+\b\f2\fs16 createuser -p 5433 -U postgres -D -A -P routine\b0\par
+Enter password for new role: \b x\b0\par
+Enter it again:\par
+Shall the new role be allowed to create more new roles? (y/n) \b n\b0\par
+Password: \tab\f1\fs20 Database administrator password (set when the DB was installed).\f2\fs16\par
+\f0\fs20\par
+Create a new and empty database with a label:\par
+\b\f2\fs16 createdb -p 5433 -U postgres -O routine routine_db "Routine database, created 15.8.2012"\b0\f0\fs20\par
+\par
+\ul\b\fs24 Database backup\ulnone\b0\fs20\par
+\par
+\b\fs22 Just the schema, no data\b0\fs20\par
+\par
+Schema from the database:\par
+\b\f2\fs16 pg_dump -U postgres -p 5433 -s -c -O -v routine_db > routine_db_2012_08_16-schema.sql\b0\f0\fs20\par
+\par
+\b\fs22 Country codes\b0\fs20\par
+\par
+Extract from an existing database:\par
+\b\f2\fs16 pg_dump -U postgres -p 5433 -t mccs -O -v context_db > context_db-mccs_2012_08-15_backup.sql\par
+\b0\f0\fs20\par
+Importing to an existing database:\par
+\cf1\lang1035\b\f2\fs16 psql -U postgres -p 5433 -d routine_db -f context_db-mccs_2012_08-15_backup.sql\par
+\cf0\lang1033\b0\f0\fs20\par
+\b\fs22 Backing up the whole database\b0\fs20\par
+\par
+Create backup:\par
+\b\f2\fs16 pg_dump -U postgres -p 5433 -O -v routine_db > routine_db_2012-08-16_backup.sql\b0\f0\fs20\par
+\par
+Restore from backup:\par
+\b\f2\fs16 psql -U postgres -p 5433 -d routine_db -f D:\\Data\\PostgreSQL\\routine_db_2012-08_16.sql\b0\f0\fs20\par
+\par
+\par
+\fs28\tab TOMCAT USE AND SETTINGS\fs20\par
+\par
+Version: 7.0.22 (2011). Just make a default installation.\par
+\par
+\fs28\tab ECLIPSE SDK USE AND SETTINGS\fs20\par
+\par
+Version: Eclipse Indigo 3.7.2 (2012).\par
+\par
+\ul\b\fs24 Installations\ulnone\b0\fs20\par
+\par
+Add modules:\par
+- Eclipse Java EE IDE for Web developers\par
+- jersey-archive-1.12.zip\par
+\par
+Eclipse, Help, Install new software...\par
+Install\par
+\tab Work with:\tab Indigo - http://download.eclipse.org/releases/indigo\par
+\tab [v] Web, XML, Java EE and OSGi Enterprise Development\par
+\tab\tab [v] Eclipse Java EE Developer Tools\tab 3.3.2\par
+\tab\tab [v] Eclipse Java Web Developer Tools\tab 3.3.2\tab Tools for working with Java Server Pages (JSP)\par
+\tab\tab [v] Eclipse Web Developer Tools\tab\tab 3.3.2\tab HTML, CSS, XHTML, etc.\par
+\tab\tab [v] JavaScript Development Tools\tab\tab 1.3.2\par
+\tab 59752 Kt\par
+\par
+\cf6 Add also (no Tomcat support othervise):\par
+\tab\tab [v] JST server adapters\tab\tab\tab 3.2.100\tab Server adapters for use with the JST server tools.\par
+\tab\tab [v] JST server adapter extensions\tab\tab 3.3.2\tab Server adapters extensions...\par
+\cf2\tab\tab [v] JST server UI\tab\tab\tab\tab 3.3.0\tab JST server UI functionality.\par
+\tab\tab\tab JST server core\tab\tab\tab 3.3.0\par
+\tab\tab\tab JST server user documentation\tab 3.3.100\par
+\cf0\par
+\b\fs22 Add Apache Tomcat Server and Web Project\b0\fs20\par
+\par
+If the Tomcat server is unavailable as a Runtime Environment! There was only "J2EE Runtime Library".\par
+\par
+Eclipse help (find "Tomcat"):\par
+\par
+\b\i Creating an Apache Tomcat server and Web project\b0\par
+\par
+If you plan to create a Web service that uses Apache Jakarta Tomcat as its server, Tomcat must be installed and a server created before you begin creating your Web service.\par
+\par
+Install Apache Jakarta Tomcat from this URL: \cf4\ul http://jakarta.apache.org/tomcat\cf0\ulnone  \par
+Once you have installed the server, create a Tomcat server in the workbench by doing the following: \par
+\par
+1. From the File menu, select \b New > Other > Server > Server > Next\b0 .\par
+2. Select Tomcat v 3.x, 4.x, v5.x, or 6.x as the server type, electing the correct version of Tomcat for your install, and click \b Next\b0 . \par
+3. On the Tomcat server page: \par
+\tab a. Enter a server name.\par
+\tab b. Specify where Tomcat is installed.\par
+\tab c. Click \b Installed JREs\b0 , click \b Add\b0 , and enter the appropriate information for the JDK you plan to use for Tomcat. For example, for Tomcat v5.0 the JRE name would be jdk141 and the JRE home would be the home directory for JDK 1.4.1. Click \b OK\b0  twice once you have entered this information. Ensure that the newly added JDK is now selected in the JRE field of the Tomcat server page. Note that if you point the server at a JRE rather than a JDK the JSPs will not properly compile and will not be able to run on the Tomcat server.\par
+4. Click \b Finish\b0 . To see the server you have created in the workspace, from the Window menu select \b Show view > Other > Server > Servers > Ok\b0 . \par
+\par
+To build a dynamic Web project that points to the Tomcat server that you have created:\par
+\par
+1. Create the service Web project by selecting \b New > Dynamic Web project\b0 . Enter the following information: \par
+\tab * Project Name: enter a project name \par
+\tab * Target runtime: Tomcat server v3.x, 4.x, 5.x, or 6.0 depending on the version you installed. If it is not listed, click New and browse to the location where it is installed. \par
+\tab * Ensure that \b Add project to an EAR\b0  is not selected.\par
+2. Click \b Finish\b0 .\par
+3. To associate the project with the server, right-click the Tomcat server you created in the Server view and select \b Add and remove projects\b0 . Select the service and client projects from the Available projects list and click \b Add\b0 .\i0\par
+\par
+Tomcat environment variables (from startup.bat). Adding permanently will not help if the runtime environment is missing in the Eclipse IDE...\par
+CATALINA_BASE:   "C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22"\par
+CATALINA_HOME:   "C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22"\par
+\par
+\cf4\ul http://stackoverflow.com/questions/2000078/apache-tomcat-not-showing-in-eclipse-server-runtime-environments\cf0\ulnone\par
+\par
+...\par
+\i I had the same problem and I solved it with the following steps\par
+   1. Help > Install New Software...\par
+   2. Select "Eclipse Web Tools Platform Repository (http://download.eclipse.org/webtools/updates)" from the "Work with" drop-down.\par
+   3. Select "Web Tools Platform (WTP)" and "Project Provided Components".\par
+Complete all the installation steps and restart Eclipse. You'll see a bunch of servers when you try to add a server runtime environment.\i0\par
+...\par
+\i In my case I needed to install "JST Server Adapters". I am running Eclipse 3.6 Helios RCP Edition.\par
+Here are the steps I followed:\par
+   1. Help -> Install New Software\par
+   2. Choose "Helios - http://download.eclipse.org/releases/helios" site\par
+   3. Expand "Web, XML, and Java EE Development"\par
+   4. Check JST Server Adapters (version 3.2.2)\par
+After that I could define new Server Runtime Environments.\par
+EDIT: With Eclipse 3.7 Indigo Classic, the steps are the same but you need both JST Server Adapters and JST Server Adapters Extentions to get the Server Runtime Environment options.\i0\par
+...\par
+\par
+I added modules JST server adapters, JST server adapter extensions and JST server UI.\par
+\par
+New server runtime environment\par
+Tomcat server\par
+Name:\tab\tab\tab\tab Apache Tomcat v7.0\par
+Tomcat installation directory:\tab C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\par
+JRE:\tab\tab\tab\tab jdk1.7.0_03\par
+\par
+The server \b Tomcat v7.0 Server at localhost\b0  an be started froma context menu (right mouse button) but is does not have the normal Web pages (\cf4\ul http://localhost:8080/\cf0\ulnone  -> "HTTP status 404 - /"). It only runs Eclipse projects in its own sand box?\par
+\par
+Eclipse created folder D:\\\\Servers, where we have folder \b Tomcat Server at localhost-config\b0 . It should not be included in the Subversion version control.\par
+\par
+\ul\b\fs24 Project settings\ulnone\b0\fs20\par
+\par
+New project, Web, Dynamic Web Project\tab (Dynamic Web Module)\par
+\par
+Projects facets:\par
+- Java 1.6 (corresponds to the Jersey API version).\par
+- Dynamic Web Module 1.6\par
+- JAXP\par
+- REST?\par
+\par
+\fs28\tab JERSEY REST API USE AND SETTINGS\fs20\par
+\par
+\cf4\ul http://jersey.java.net/\cf0\ulnone\par
+\par
+Help (bolded ones especially for Eclipse and Tomcat):\par
+\cf4\ul http://jersey.java.net/nonav/documentation/latest/user-guide.html#getting-started\par
+http://matthewturland.com/slides/jersey/\par
+https://wikis.oracle.com/display/Jersey/Main\par
+http://jersey.java.net/nonav/apidocs/latest/jersey/index.html\par
+http://docs.oracle.com/cd/E19776-01/820-4867/index.html\par
+\b http://www.vogella.com/articles/REST/article.html\b0\par
+\b http://en.wikipedia.org/wiki/Java_API_for_RESTful_Web_Services\b0\par
+\b http://www.ibm.com/developerworks/web/library/wa-aj-tomcat/\b0\par
+\b http://coenraets.org/blog/2011/11/building-restful-services-with-java-using-jax-rs-and-jersey-sample-application/\cf0\ulnone\b0\par
+\par
+Dependencies:\tab\cf4\ul http://jersey.java.net/nonav/documentation/latest/user-guide.html#chapter_deps\cf0\ulnone  or\par
+\tab\tab\cf4\ul http://jersey.java.net/nonav/documentation/latest/chapter_deps.html\cf0\ulnone\par
+\par
+\fs28\tab INSTALLING THE ACTIVITYLOGGER SERVICE INTO TOMCAT\fs20\par
+\par
+Service URL:\tab\cf4\ul https://server:9018/ActivityLogger/\cf0\ulnone\tab Shows the starting page index.html.\par
+\par
+\cf1\lang1035\b\f1\fs22 Installation package\cf0\lang1033\b0\f0\fs20\par
+\par
+Eclipse\par
+ActivityLogger, Export...\par
+Web, WAR file\par
+Select an export destination:\tab\\ActivityLogger\\dist\par
+[ ] Optimize for a specific server runtime:\tab Apache Tomcat v7.0\tab (J2EE Runtime Library)\par
+=> ActivityLogger.war\tab ~3 Mt\tab (ActivityLogger_Tomcat7.war ~3Mt)\par
+\par
+\b\fs22 Installing (Tomcat 6)\b0\fs20\par
+\par
+Use PuTTY package in Windows.\par
+\par
+ActivityLogger.war\tab ->\tab /home/routine/apache-tomcat-6.0.35/webapps/\par
+\par
+\f2\fs16 >pscp -p \\ActivityLogger\\dist\\ActivityLogger.war routine@server:/home/routine/\par
+\f0\fs20\par
+\cf2 cd apache-tomcat-6.0.35/bin/\par
+./shutdown.sh\par
+rm -r /home/routine/apache-tomcat-6.0.35/webapps/ActivityLogger\cf0\par
+cp /home/routine/ActivityLogger.war /home/routine/apache-tomcat-6.0.35/webapps/\par
+\cf2 ./startup.sh\cf0\par
+\par
+\fs28\tab AUTHENTICATION AND ACCESS CONTROL\fs20\par
+\par
+\ul\b\fs24 Security: authentication, encryption and access control\ulnone\b0\fs20\par
+\par
++ User roles, names and passwords into file C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\tomcat-users.xml. Users (role, name, password) and rights:\par
+  o activity_logger-administrator:administrator (*********):\par
+     Full access to the routine_db database (REST: GET, POST, PUT, DELETE). HTTPS connection required.\par
+  o activity_logger-user:user (********):\par
+     Acess only to data owned by the given (secret) device_name URL parameter but within that data has full rights. HTTPS\par
+     required.\par
+  o Anonymous user (no name or password):\par
+     Acess only to data owned by the given (secret) device_name URL parameter. Has only GET (read) rigths. Only HTTP.\par
+     \b WAS NOT IMPLEMENTED (DIFFICULT TO DEFINE IN THE TOMCAT SETTINGS). ActivityLogger root is accessible\par
+     without login and encryption but the resource /rest/* is protected.\b0\par
+  o activity_logger-guest:guest (********):\par
+     A read only acess only to data owned by the given (secret) device_name URL parameter. HTTPS required.\par
+     WAS NOT IMPLEMENTED. Can be done in the server code, though.\par
+\par
++ SSL (HTTPS) -encryption on using files C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\server.xml, web.xml and tomcat_keystore.\par
+\par
++ Access to resources and access settings (login&SSL) is defined in C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\web.xml.\par
+\par
++ ActivityLogger will check the logged in user name or role (but not password) and decides if the user has administrator rights (allow all data in the database) or user rights (allow only data belonging to the supplied device_name and optional logger_application_name).\par
+\par
++ AcitvityLogger extracts the values device_name and logger_application_name fro the query parameters or URL request parameters.\par
+\par
++ Queries.java searches records from the DB using the parameters device_name and logger_application_name (if missing, gives all records).\par
+\par
++ Data sent with HTTP POST (names and timestamps) will be checked against injection attack.\par
+\par
+\b\fs22 Links\b0\fs20\par
+\par
+\cf4\ul http://tomcat.apache.org/tomcat-6.0-doc/realm-howto.html\cf0\ulnone\tab "The long and winding road...". Tomcat documentation.\par
+\cf4\ul http://www.indicthreads.com/1443/setting-up-secure-web-authentication-in-tomcat/\cf0\ulnone\tab Security basics but may be in error?\par
+\cf4\ul http://oreilly.com/java/archive/tomcat-tips.html\cf0\ulnone\tab\tab\tab 5. Configuring Basic Authentication\par
+\cf4\ul http://www.jguru.com/faq/view.jsp?EID=239670\cf0\ulnone\tab\tab\tab See comments "By Sam S May 12 2008" and\par
+\tab\tab\tab\tab\tab\tab\tab\tab "By Jacob Kjome August 02 2001 14:40 PDT".\par
+\cf4\ul http://magicmonster.com/kb/app/tomcat/authentication.html\cf0\ulnone\tab Example of using a database for authentication.\par
+\cf4\ul http://matthewturland.com/slides/jersey/\cf0\ulnone\tab\tab\tab\tab Authentication Example (slide 64/77).\par
+\cf4\ul http://wiki.metawerx.net/wiki/Web.xml\cf0\ulnone\tab\tab\tab\tab web.xml Reference Guide for Tomcat.\par
+\cf4\ul http://java.dzone.com/articles/understanding-web-security\cf0\ulnone\tab\tab Understanding Web Security Using web.xml Via\par
+\tab\tab\tab\tab\tab\tab\tab\tab  Use Cases\par
+\cf4\ul http://software-security.sans.org/blog/2010/08/11/security-misconfigurations-java-webxml-files/\cf0\ulnone\par
+\par
+\ul\b\fs24 Server SSL (HTTPS) encryption\ulnone\b0\fs20\par
+\par
+\b\fs22 localhost Tomcat 7\b0\fs20\par
+\par
+Default settings \cf4\ul https://localhost/ActivityLogger/\cf0\ulnone\par
+=>\par
+"Secure Connection Failed\par
+An error occurred during a connection to localhost.\par
+SSL received a record that exceeded the maximum permissible length.\par
+(Error code: ssl_error_rx_record_too_long)\par
+    *   The page you are trying to view can not be shown because the authenticity of the received data could not be verified.\par
+    *   Please contact the web site owners to inform them of this problem. Alternatively, use the command found in the help menu to report this broken site."\par
+\par
+Default settings \cf4\ul https://localhost:8181/ActivityLogger/\cf0\ulnone\par
+=>\par
+"Unable to connect\par
+Firefox can't establish a connection to the server at localhost:8181.\par
+    *   The site could be temporarily unavailable or too busy. Try again in a few\par
+          moments.\par
+    *   If you are unable to load any pages, check your computer's network\par
+          connection.\par
+    *   If your computer or network is protected by a firewall or proxy, make sure\par
+          that Firefox is permitted to access the Web."\par
+\par
+The HTTPS is not configured by default.\par
+\par
+\ul Edit C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\server.xml:\ulnone\par
+...\par
+<Server port="8005" shutdown="SHUTDOWN">\par
+...\par
+  <Service name="Catalina">\par
+...\par
+<!-- HTTPS connector -->\par
+\f1 <Connector port="\b 8181\b0 " maxHttpHeaderSize="8192"\par
+   protocol="HTTP/1.1" SSLEnabled="true"\par
+   maxThreads="150" minSpareThreads="25" maxSpareThreads="75"\par
+   enableLookups="false" disableUploadTimeout="true"\par
+   acceptCount="100" scheme="https" secure="true"\par
+   keystoreFile="\b C:/Program Files/Apache Software Foundation/Apache Tomcat 7.0.22/conf/tomcat_keystore\b0 "\par
+   keystorePass="*******" \par
+   ciphers="SSL_RSA_WITH_RC4_128_MD5, SSL_RSA_WITH_RC4_128_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_DSS_WITH_AES_128_CBC_SHA, SSL_RSA_WITH_3DES_EDE_CBC_SHA,SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA, SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"\par
+   clientAuth="false" sslProtocol="TLS" />\par
+\f0 ...\par
+    <Engine name="Catalina" defaultHost="localhost">\par
+...\par
+<!-- PostgreSQL database driver (\b define before LockOutRealm!\b0 ) -->\par
+           <Realm className="org.apache.catalina.realm.JDBCRealm" driverName="org.postgresql.Driver"\par
+                       connectionURL="jdbc:postgresql://localhost:543\b 2\b0 /routine_db" connectionName="routine"\par
+                       connectionPassword="*" username="routine" password="*" />\par
+...\par
+\cf1\f4\fs16       \cf10 <\cf11 Host\cf0  \cf12 appBase\cf1 =\cf13\i "webapps"\cf0\i0  \cf12 autoDeploy\cf1 =\cf13\i "true"\cf0\i0  \cf12 name\cf1 =\cf13\i "localhost"\cf0\i0  \cf12 unpackWARs\cf1 =\cf13\i "true"\cf0\i0  \cf12 xmlNamespaceAware\cf1 =\cf13\i "false"\cf0\i0  \cf12 xmlValidation\cf1 =\cf13\i "false"\cf10\i0 >\cf0\par
+\cf1           \cf0\par
+\cf1         \cf14 <!-- SingleSignOn valve, share authentication between web applications\cf0\par
+\cf14              Documentation at: /docs/config/valve.html -->\cf0\par
+\cf1         \cf14 <!--\cf0\par
+\cf14         <Valve className="org.apache.catalina.authenticator.SingleSignOn" />\cf0\par
+\cf14         -->\cf0\par
+\par
+\cf1         \cf14 <!-- Access log processes all example.\cf0\par
+\cf14              Documentation at: /docs/config/valve.html\cf0\par
+\cf14              Note: The pattern used is equivalent to using pattern="common" -->\cf0\par
+\cf1         \cf10 <\cf11 Valve\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.valves.AccessLogValve"\cf0\i0  \cf12 directory\cf1 =\cf13\i "logs"\cf0\i0  \cf12 pattern\cf1 =\cf13\i "%h %l %u %t &quot;%r&quot; %s %b"\cf0\i0  \cf12 prefix\cf1 =\cf13\i "localhost_access_log."\cf0\i0  \cf12 suffix\cf1 =\cf13\i ".txt"\cf10\i0 />\cf0\par
+\par
+\cf1       \cf10 <\cf11 Context\cf0  \cf12 docBase\cf1 =\cf13\i "ActivityLogger"\cf0\i0  \cf12 path\cf1 =\cf13\i "/ActivityLogger"\cf0\i0  \cf12 reloadable\cf1 =\cf13\i "true"\cf0\i0  \cf12 source\cf1 =\cf13\i "org.eclipse.jst.jee.server:ActivityLogger"\cf10\i0 /></\cf11 Host\cf10 >\cf0\f0\fs20\par
+    </Engine>\par
+  </Service>\par
+</Server>\par
+\par
+Copy an existing tomcat_keystore to\par
+C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\\par
+\par
+\b Example of creating and configuring a Tomcat keystore (produces an untrusted developer certificate for HTTPS):\b0\par
+\par
+\cf5 routine@server:~$ keytool -genkey -alias tomcat -keyalg RSA -keystore tomcat_keystore\par
+Enter keystore password:\par
+Re-enter new password:\par
+What is your first and last name?\par
+  [Unknown]:  Routine\par
+What is the name of your organizational unit?\par
+  [Unknown]:  Routine devel\par
+What is the name of your organization?\par
+  [Unknown]:  Developer\par
+What is the name of your City or Locality?\par
+  [Unknown]:  City\par
+What is the name of your State or Province?\par
+  [Unknown]:\par
+What is the two-letter country code for this unit?\par
+  [Unknown]:  FI\par
+Is CN=Routine, OU=Routine devel, O=Developer, L=City, ST=Unknown, C=FI correct?\par
+  [no]:  yes\par
+\par
+Enter key password for <tomcat>\par
+        (RETURN if same as keystore password):\par
+\tab\tab\par
+routine@server:~$ cp tomcat_keystore apache-tomcat-6.0.35/conf/\par
+\par
+routine@server:~$ cd apache-tomcat-6.0.35/conf/\par
+\par
+modified server.xml & added HTTPS connector to port 9018 (server.xml modifications):\par
+\par
+<Connector port="9018" maxHttpHeaderSize="8192"\par
+   protocol="HTTP/1.1" SSLEnabled="true"\par
+   maxThreads="150" minSpareThreads="25" maxSpareThreads="75"\par
+   enableLookups="false" disableUploadTimeout="true"\par
+   acceptCount="100" scheme="https" secure="true"\par
+   keystoreFile="/home/routine/apache-tomcat-6.0.35/conf/tomcat_keystore" keystorePass="zvfgg88K" \par
+   ciphers="SSL_RSA_WITH_RC4_128_MD5, SSL_RSA_WITH_RC4_128_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_DSS_WITH_AES_128_CBC_SHA, SSL_RSA_WITH_3DES_EDE_CBC_SHA,SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA, SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"\par
+   clientAuth="false" sslProtocol="TLS" />\par
+   \par
+\par
+http://server:9017/\par
+https://server:9018/\par
+\cf0\par
+After changing settings for \cf4\ul https://localhost/ActivityLogger/\cf0\ulnone\par
+=>\par
+"Secure Connection Failed\par
+An error occurred during a connection to localhost.\par
+SSL received a record that exceeded the maximum permissible length.\par
+(Error code: ssl_error_rx_record_too_long)\par
+    *   The page you are trying to view can not be shown because the authenticity of the received data could not be verified.\par
+    *   Please contact the web site owners to inform them of this problem. Alternatively, use the command found in the help menu to report this broken site."\par
+The default HTTPS port 443 does not work.\par
+\par
+When using the ocrrect port \cf4\ul https://localhost:8181/ActivityLogger/\cf0\ulnone\par
+=>\par
+It works!\par
+\par
+\b\fs22 Eclipse localhost Tomcat 7\b0\fs20\par
+\par
+\ul Edit Eclipse IDE: Servers, Tomcat7, server.xml (Servers/Tomcat v7.0 Server at localhost-config/server.xml):\ulnone\par
+\par
+Changes \b bolded\b0 .\par
+\par
+\cf10\f4\fs16 <?\cf11 xml\cf0  \cf12 version\cf1 =\cf13\i "1.0"\cf0\i0  \cf12 encoding\cf1 =\cf13\i "UTF-8"\cf10\i0 ?>\cf0\par
+\cf14 <!--\cf0\par
+\cf14   Licensed to the Apache Software Foundation (ASF) under one or more\cf0\par
+\cf14   contributor license agreements.  See the NOTICE file distributed with\cf0\par
+\cf14   this work for additional information regarding copyright ownership.\cf0\par
+\cf14   The ASF licenses this file to You under the Apache License, Version 2.0\cf0\par
+\cf14   (the "License"); you may not use this file except in compliance with\cf0\par
+\cf14   the License.  You may obtain a copy of the License at\cf0\par
+\par
+\cf14       http://www.apache.org/licenses/LICENSE-2.0\cf0\par
+\par
+\cf14   Unless required by applicable law or agreed to in writing, software\cf0\par
+\cf14   distributed under the License is distributed on an "AS IS" BASIS,\cf0\par
+\cf14   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\cf0\par
+\cf14   See the License for the specific language governing permissions and\cf0\par
+\cf14   limitations under the License.\cf0\par
+\cf14 --><!-- Note:  A "Server" is not itself a "Container", so you may not\cf0\par
+\cf14      define subcomponents such as "Valves" at this level.\cf0\par
+\cf14      Documentation at /docs/config/server.html\cf0\par
+\cf14  -->\cf10 <\cf11 Server\cf0  \cf12 port\cf1 =\cf13\i "8005"\cf0\i0  \cf12 shutdown\cf1 =\cf13\i "SHUTDOWN"\cf10\i0 >\cf0\par
+\cf1   \cf14 <!-- Security listener. Documentation at /docs/config/listeners.html\cf0\par
+\cf14   <Listener className="org.apache.catalina.security.SecurityListener" />\cf0\par
+\cf14   -->\cf0\par
+\cf1   \cf14 <!--APR library loader. Documentation at /docs/apr.html -->\cf0\par
+\cf1   \cf10 <\cf11 Listener\cf0  \cf12 SSLEngine\cf1 =\cf13\i "on"\cf0\i0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.core.AprLifecycleListener"\cf10\i0 />\cf0\par
+\cf1   \cf14 <!--Initialize Jasper prior to webapps are loaded. Documentation at /docs/jasper-howto.html -->\cf0\par
+\cf1   \cf10 <\cf11 Listener\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.core.JasperListener"\cf10\i0 />\cf0\par
+\cf1   \cf14 <!-- Prevent memory leaks due to use of particular java/javax APIs-->\cf0\par
+\cf1   \cf10 <\cf11 Listener\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.core.JreMemoryLeakPreventionListener"\cf10\i0 />\cf0\par
+\cf1   \cf10 <\cf11 Listener\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.mbeans.GlobalResourcesLifecycleListener"\cf10\i0 />\cf0\par
+\cf1   \cf10 <\cf11 Listener\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.core.ThreadLocalLeakPreventionListener"\cf10\i0 />\cf0\par
+\par
+\cf1   \cf14 <!-- Global JNDI resources\cf0\par
+\cf14        Documentation at /docs/jndi-resources-howto.html\cf0\par
+\cf14   -->\cf0\par
+\cf1   \cf10 <\cf11 GlobalNamingResources\cf10 >\cf0\par
+\cf1     \cf14 <!-- Editable user database that can also be used by\cf0\par
+\cf14          UserDatabaseRealm to authenticate users\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf10 <\cf11 Resource\cf0  \cf12 auth\cf1 =\cf13\i "Container"\cf0\i0  \cf12 description\cf1 =\cf13\i "User database that can be updated and saved"\cf0\i0  \cf12 factory\cf1 =\cf13\i "org.apache.catalina.users.MemoryUserDatabaseFactory"\cf0\i0  \cf12 name\cf1 =\cf13\i "UserDatabase"\cf0\i0  \cf12 pathname\cf1 =\cf13\i "conf/tomcat-users.xml"\cf0\i0  \cf12 type\cf1 =\cf13\i "org.apache.catalina.UserDatabase"\cf10\i0 />\cf0\par
+\cf1   \cf10 </\cf11 GlobalNamingResources\cf10 >\cf0\par
+\par
+\cf1   \cf14 <!-- A "Service" is a collection of one or more "Connectors" that share\cf0\par
+\cf14        a single "Container" Note:  A "Service" is not itself a "Container", \cf0\par
+\cf14        so you may not define subcomponents such as "Valves" at this level.\cf0\par
+\cf14        Documentation at /docs/config/service.html\cf0\par
+\cf14    -->\cf0\par
+\cf1   \cf10 <\cf11 Service\cf0  \cf12 name\cf1 =\cf13\i "Catalina"\cf10\i0 >\cf0\par
+\cf1   \cf0\par
+\cf1     \cf14 <!--The connectors can use a shared executor, you can define one or more named thread pools-->\cf0\par
+\cf1     \cf14 <!--\cf0\par
+\cf14     <Executor name="tomcatThreadPool" namePrefix="catalina-exec-" \cf0\par
+\cf14         maxThreads="150" minSpareThreads="4"/>\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf0\par
+\cf1     \cf0\par
+\cf1     \cf14 <!-- A "Connector" represents an endpoint by which requests are received\cf0\par
+\cf14          and responses are returned. Documentation at :\cf0\par
+\cf14          Java HTTP Connector: /docs/config/http.html (blocking & non-blocking)\cf0\par
+\cf14          Java AJP  Connector: /docs/config/ajp.html\cf0\par
+\cf14          APR (HTTP/AJP) Connector: /docs/apr.html\cf0\par
+\cf14          Define a non-SSL HTTP/1.1 Connector on port 8080\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf14 <!-- \lang1035\f6 Original value\lang1033\f4 :\cf0\par
+\cf14     <Connector connectionTimeout="20000" port="8080" protocol="HTTP/1.1" redirectPort="8443"/>\cf0\par
+\cf14     \lang1035\f6 Changed for\lang1033\f4  ActivityLogger\lang1035\f6  to\lang1033\f4 :\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf10 <\cf11 Connector\cf0  \cf12 compressableMimeType\cf1 =\cf13\i "text/html,text/xml,text/css,application/javascript,text/javascript"\cf0\i0  \cf12 compression\cf1 =\cf13\i "on"\cf0\i0  \cf12 compressionMinSize\cf1 =\cf13\i "2048"\cf0\i0  \cf12 connectionTimeout\cf1 =\cf13\i "20000"\cf0\i0  \cf12 port\cf1 =\cf13\i "8080"\cf0\i0  \cf12 protocol\cf1 =\cf13\i "HTTP/1.1"\cf0\i0  \cf12 redirectPort\cf1 =\cf13\i "\lang1035\b\f6 8181\lang1033\b0\f4 "\cf10\i0 />\lang1035\b\f6 <!-- Default value: \cf12\lang1033\f4 redirectPort\cf1 =\cf13\i "8443"\lang1035\f6 . Changed for HTTP->HTTPS to work.\cf10\i0  -->\cf0\lang1033\b0\f4\par
+\par
+\cf1     \cf0\par
+\cf1     \cf14 <!-- A "Connector" using the shared thread pool-->\cf0\par
+\cf1     \cf14 <!--\cf0\par
+\cf14     <Connector executor="tomcatThreadPool"\cf0\par
+\cf14                port="8080" protocol="HTTP/1.1" \cf0\par
+\cf14                connectionTimeout="20000" \cf0\par
+\cf14                redirectPort="8443" />\cf0\par
+\cf14     -->\cf1            \cf0\par
+\cf1     \cf14 <!-- Define a SSL HTTP/1.1 Connector on port 8443\cf0\par
+\cf14          This connector uses the JSSE configuration, when using APR, the \cf0\par
+\cf14          connector should be using the OpenSSL style configuration\cf0\par
+\cf14          described in the APR documentation -->\cf0\par
+\cf1\b     \cf14 <!-- HTTPS connector -->\cf0\par
+\cf1     \cf10 <\cf11 Connector\cf0  \cf12 port\cf1 =\cf13\i "8181"\cf0\i0  \cf12 maxHttpHeaderSize\cf1 =\cf13\i "8192"\cf0\i0\par
+       \cf12 protocol\cf1 =\cf13\i "HTTP/1.1"\cf0\i0  \cf12 SSLEnabled\cf1 =\cf13\i "true"\cf0\i0\par
+       \cf12 maxThreads\cf1 =\cf13\i "150"\cf0\i0  \cf12 minSpareThreads\cf1 =\cf13\i "25"\cf0\i0  \cf12 maxSpareThreads\cf1 =\cf13\i "75"\cf0\i0\par
+       \cf12 enableLookups\cf1 =\cf13\i "false"\cf0\i0  \cf12 disableUploadTimeout\cf1 =\cf13\i "true"\cf0\i0\par
+       \cf12 acceptCount\cf1 =\cf13\i "100"\cf0\i0  \cf12 scheme\cf1 =\cf13\i "https"\cf0\i0  \cf12 secure\cf1 =\cf13\i "true"\cf0\i0\par
+       \cf12 keystoreFile\cf1 =\cf13\i "C:/Program Files/Apache Software Foundation/Apache Tomcat 7.0.22/conf/tomcat_keystore"\cf0\i0\par
+       \cf12 keystorePass\cf1 =\cf13\i "\lang1035\f6 *******\lang1033\f4 "\cf0\i0  \par
+       \cf12 ciphers\cf1 =\cf13\i "SSL_RSA_WITH_RC4_128_MD5, SSL_RSA_WITH_RC4_128_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_DSS_WITH_AES_128_CBC_SHA, SSL_RSA_WITH_3DES_EDE_CBC_SHA,SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA, SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"\cf0\i0\par
+       \cf12 clientAuth\cf1 =\cf13\i "false"\cf0\i0  \cf12 sslProtocol\cf1 =\cf13\i "TLS"\cf0\i0  \cf10 />\cf0\par
+\cf1\b0     \cf14 <!--\cf0\par
+\cf14     <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true"\cf0\par
+\cf14                maxThreads="150" scheme="https" secure="true"\cf0\par
+\cf14                clientAuth="false" sslProtocol="TLS" />\cf0\par
+\cf14     -->\cf0\par
+\par
+\cf1     \cf14 <!-- Define an AJP 1.3 Connector on port 8009 -->\cf0\par
+\cf1     \cf10 <\cf11 Connector\cf0  \cf12 port\cf1 =\cf13\i "8009"\cf0\i0  \cf12 protocol\cf1 =\cf13\i "AJP/1.3"\cf0\i0  \cf12 redirectPort\cf1 =\cf13\i "8443"\cf10\i0 />\cf0\par
+\par
+\par
+\cf1     \cf14 <!-- An Engine represents the entry point (within Catalina) that processes\cf0\par
+\cf14          every request.  The Engine implementation for Tomcat stand alone\cf0\par
+\cf14          analyzes the HTTP headers included with the request, and passes them\cf0\par
+\cf14          on to the appropriate Host (virtual host).\cf0\par
+\cf14          Documentation at /docs/config/engine.html -->\cf0\par
+\par
+\cf1     \cf14 <!-- You should set jvmRoute to support load-balancing via AJP ie :\cf0\par
+\cf14     <Engine name="Catalina" defaultHost="localhost" jvmRoute="jvm1">         \cf0\par
+\cf14     -->\cf1  \cf0\par
+\cf1     \cf10 <\cf11 Engine\cf0  \cf12 defaultHost\cf1 =\cf13\i "localhost"\cf0\i0  \cf12 name\cf1 =\cf13\i "Catalina"\cf10\i0 >\cf0\par
+\par
+\cf1       \cf14 <!--For clustering, please take a look at documentation at:\cf0\par
+\cf14           /docs/cluster-howto.html  (simple how to)\cf0\par
+\cf14           /docs/config/cluster.html (reference documentation) -->\cf0\par
+\cf1       \cf14 <!--\cf0\par
+\cf14       <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/>\cf0\par
+\cf14       -->\cf1         \cf0\par
+\par
+\cf1\tab   \cf14 <!-- PostgreSQL database driver -->\cf0\par
+\cf1  \cf0\par
+\cf1\tab   \cf14 <!-- \lang1035\f6 routine \lang1033\f4 database configuration -->\cf0\par
+\cf1\tab   \cf10 <\cf11 Realm\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.realm.JDBCRealm"\cf0\i0  \cf12 connectionName\cf1 =\cf13\i "\lang1035\f6 routine\lang1033\f4 "\cf0\i0  \cf12 connectionPassword\cf1 =\cf13\i "x"\cf0\i0  \cf12 connectionURL\cf1 =\cf13\i "jdbc:postgresql://localhost:5432/\lang1035\f6 routine\lang1033\f4 _db"\cf0\i0  \cf12 driverName\cf1 =\cf13\i "org.postgresql.Driver"\cf0\i0  \cf12 password\cf1 =\cf13\i "x"\cf0\i0  \cf12 username\cf1 =\cf13\i "\lang1035\f6 routine\lang1033\f4 "\cf10\i0 />\cf0\par
+\par
+\cf1       \cf14 <!-- Use the LockOutRealm to prevent attempts to guess user passwords\cf0\par
+\cf14            via a brute-force attack -->\cf0\par
+\cf1       \cf10 <\cf11 Realm\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.realm.LockOutRealm"\cf10\i0 >\cf0\par
+\cf1         \cf14 <!-- This Realm uses the UserDatabase configured in the global JNDI\cf0\par
+\cf14              resources under the key "UserDatabase".  Any edits\cf0\par
+\cf14              that are performed against this UserDatabase are immediately\cf0\par
+\cf14              available for use by the Realm.  -->\cf0\par
+\cf1         \cf10 <\cf11 Realm\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.realm.UserDatabaseRealm"\cf0\i0  \cf12 resourceName\cf1 =\cf13\i "UserDatabase"\cf10\i0 />\cf0\par
+\cf1       \cf10 </\cf11 Realm\cf10 >\cf0\par
+\par
+\cf1       \cf14 <!-- \lang1035\f6 Old value\lang1033\f4 :\cf0\par
+\cf14       <Host appBase="webapps" autoDeploy="true" name="localhost" unpackWARs="true">\cf0\par
+\cf14       \lang1035\f6 New value for ActivityLogger\lang1033\f4 :\cf0\par
+\cf14       -->\cf0\par
+\cf1       \cf10 <\cf11 Host\cf0  \cf12 appBase\cf1 =\cf13\i "webapps"\cf0\i0  \cf12 autoDeploy\cf1 =\cf13\i "true"\cf0\i0  \cf12 name\cf1 =\cf13\i "localhost"\cf0\i0  \cf12 unpackWARs\cf1 =\cf13\i "true"\cf0\i0  \cf12 xmlNamespaceAware\cf1 =\cf13\i "false"\cf0\i0  \cf12 xmlValidation\cf1 =\cf13\i "false"\cf10\i0 >\cf0\par
+\cf1           \cf0\par
+\cf1         \cf14 <!-- SingleSignOn valve, share authentication between web applications\cf0\par
+\cf14              Documentation at: /docs/config/valve.html -->\cf0\par
+\cf1         \cf14 <!--\cf0\par
+\cf14         <Valve className="org.apache.catalina.authenticator.SingleSignOn" />\cf0\par
+\cf14         -->\cf0\par
+\par
+\cf1         \cf14 <!-- Access log processes all example.\cf0\par
+\cf14              Documentation at: /docs/config/valve.html\cf0\par
+\cf14              Note: The pattern used is equivalent to using pattern="common" -->\cf0\par
+\cf1         \cf10 <\cf11 Valve\cf0  \cf12 className\cf1 =\cf13\i "org.apache.catalina.valves.AccessLogValve"\cf0\i0  \cf12 directory\cf1 =\cf13\i "logs"\cf0\i0  \cf12 pattern\cf1 =\cf13\i "%h %l %u %t &quot;%r&quot; %s %b"\cf0\i0  \cf12 prefix\cf1 =\cf13\i "localhost_access_log."\cf0\i0  \cf12 suffix\cf1 =\cf13\i ".txt"\cf10\i0 />\cf0\par
+\par
+\cf1       \cf10 <\cf11 Context\cf0  \cf12 docBase\cf1 =\cf13\i "ActivityLogger"\cf0\i0  \cf12 path\cf1 =\cf13\i "/ActivityLogger"\cf0\i0  \cf12 reloadable\cf1 =\cf13\i "true"\cf0\i0  \cf12 source\cf1 =\cf13\i "org.eclipse.jst.jee.server:ActivityLogger"\cf10\i0 /></\cf11 Host\cf10 >\cf0\par
+\cf1     \cf10 </\cf11 Engine\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 Service\cf10 >\cf0\par
+\cf10 </\cf11 Server\cf10 >\cf0\f0\fs20\par
+\par
+Copy exported tomcat_keystore\par
+D:\\your folder\\PostgreSQL\\server routine\\apache-tomcat-6.0.35\\conf\\\par
+->\par
+C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\\par
+\par
+Changed settings \cf4\ul https://localhost/ActivityLogger/\cf0\ulnone\par
+=>\par
+Jams. Default HTTPS port 443 does not work.\par
+\par
+Changed settings with correct port \cf4\ul https://localhost:8181/ActivityLogger/\cf0\ulnone\par
+=>\par
+Works!\par
+\par
+\ul\b\fs24 Tomcat server HTTP authentication\ulnone\b0\fs20\par
+\par
+C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\tomcat-users.xml:\par
+\par
+\f2\fs16 <?xml version='1.0' encoding='utf-8'?>\par
+<!--\par
+  Licensed to the Apache Software Foundation (ASF) under one or more\par
+  contributor license agreements.  See the NOTICE file distributed with\par
+  this work for additional information regarding copyright ownership.\par
+  The ASF licenses this file to You under the Apache License, Version 2.0\par
+  (the "License"); you may not use this file except in compliance with\par
+  the License.  You may obtain a copy of the License at\par
+\par
+      http://www.apache.org/licenses/LICENSE-2.0\par
+\par
+  Unless required by applicable law or agreed to in writing, software\par
+  distributed under the License is distributed on an "AS IS" BASIS,\par
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\par
+  See the License for the specific language governing permissions and\par
+  limitations under the License.\par
+-->\par
+<tomcat-users>\par
+<!--\par
+  NOTE:  By default, no user is included in the "manager-gui" role required\par
+  to operate the "/manager/html" web application.  If you wish to use this app,\par
+  you must define such a user - the username and password are arbitrary.\par
+-->\par
+<!--\par
+  NOTE:  The sample user and role entries below are wrapped in a comment\par
+  and thus are ignored when reading this file. Do not forget to remove\par
+  <!.. ..> that surrounds them.\par
+-->\par
+<!--\par
+  <role rolename="tomcat"/>\par
+  <role rolename="role1"/>\par
+  <user username="tomcat" password="tomcat" roles="tomcat"/>\par
+  <user username="both" password="tomcat" roles="tomcat,role1"/>\par
+  <user username="role1" password="tomcat" roles="role1"/>\par
+-->\par
+\par
+\cf6   <!-- For ActivityLogger: -->\par
+  <role rolename="activity_logger-administrator"/>\par
+  <role rolename="activity_logger-user"/>\par
+  <user username="administrator" password="*********" roles="activity_logger-user"/>\par
+  <user username="user" password="********" roles="activity_logger-user"/>\par
+\cf0\par
+  <user username="you" password="*******" roles="manager-gui"/>\par
+</tomcat-users>\f0\fs20\par
+\par
+Edit in Eclipse IDE the project specific settings file ActivityLogger/WebContent/WEB-INF/web.xml (NOT Servers/Tomcat v7.0 Server at localhost-config/web.xml because it is for the general settings of the whole server):\par
+\par
+\cf10\f4\fs16 <?\cf11 xml\cf0  \cf12 version\cf1 =\cf13\i "1.0"\cf0\i0  \cf12 encoding\cf1 =\cf13\i "UTF-8"\cf10\i0 ?>\cf0\par
+\cf10 <\cf11 web-app\cf0  \cf12 xmlns:xsi\cf1 =\cf13\i "http://www.w3.org/2001/XMLSchema-instance"\cf0\i0  \cf12 xmlns\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee"\cf0\i0  \cf12 xmlns:web\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"\cf0\i0  \cf12 xsi:schemaLocation\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"\cf0\i0  \cf12 id\cf1 =\cf13\i "WebApp_ID"\cf0\i0  \cf12 version\cf1 =\cf13\i "2.5"\cf10\i0 >\cf0\par
+\cf1   \cf10 <\cf11 servlet\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 servlet-name\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-class\cf10 >\cf0\par
+\cf1   com.sun.jersey.spi.container.servlet.ServletContainer\cf0\par
+\cf10 </\cf11 servlet-class\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 init-param\cf10 >\cf0\par
+\cf1       \cf10 <\cf11 param-name\cf10 >\cf1 com.sun.jersey.config.property.packages\cf10 </\cf11 param-name\cf10 >\cf0\par
+\cf1       \cf10 <\cf11 param-value\cf10 >\cf1 fi.vtt\cf10 </\cf11 param-value\cf10 >\cf0\par
+\cf1     \cf10 </\cf11 init-param\cf10 >\cf0\par
+\cf1     \cf14 <!--  Alternative to using @XmlRootElement keyword in serializing classes for GET: Not used for now.\cf0\par
+\cf14     <init-param>\cf0\par
+\cf14         <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>\cf0\par
+\cf14         <param-value>true</param-value>\cf0\par
+\cf14     </init-param>\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf10 <\cf11 load-on-startup\cf10 >\cf1 1\cf10 </\cf11 load-on-startup\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 servlet\cf10 >\cf0\par
+\cf1   \cf10 <\cf11 servlet-mapping\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 servlet-name\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 url-pattern\cf10 >\cf1 /rest/*\cf10 </\cf11 url-pattern\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 servlet-mapping\cf10 >\cf0\par
+\cf10 </\cf11 web-app\cf10 >\cf0\f0\fs20\par
+\par
+->\par
+\par
+\cf10\f4\fs16 <?\cf11 xml\cf0  \cf12 version\cf1 =\cf13\i "1.0"\cf0\i0  \cf12 encoding\cf1 =\cf13\i "UTF-8"\cf10\i0 ?>\cf0\par
+\cf10 <\cf11 web-app\cf0  \cf12 xmlns:xsi\cf1 =\cf13\i "http://www.w3.org/2001/XMLSchema-instance"\cf0\i0  \cf12 xmlns\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee"\cf0\i0\par
+         \cf12 xmlns:web\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"\cf0\i0\par
+         \cf12 xsi:schemaLocation\cf1 =\cf13\i "http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"\cf0\i0  \cf12 id\cf1 =\cf13\i "WebApp_ID"\cf0\i0  \cf12 version\cf1 =\cf13\i "2.5"\cf10\i0 >\cf0\par
+\cf1   \cf10 <\cf11 servlet\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 servlet-name\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-class\cf10 >\cf1 com.sun.jersey.spi.container.servlet.ServletContainer\cf10 </\cf11 servlet-class\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 init-param\cf10 >\cf0\par
+\cf1       \cf10 <\cf11 param-name\cf10 >\cf1 com.sun.jersey.config.property.packages\cf10 </\cf11 param-name\cf10 >\cf0\par
+\cf1       \cf10 <\cf11 param-value\cf10 >\cf1 fi.vtt\cf10 </\cf11 param-value\cf10 >\cf0\par
+\cf1     \cf10 </\cf11 init-param\cf10 >\cf0\par
+\cf1     \cf14 <!--  Alternative to using @XmlRootElement keyword in serializing classes for GET: Not used for now.\cf0\par
+\cf14     <init-param>\cf0\par
+\cf14         <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>\cf0\par
+\cf14         <param-value>true</param-value>\cf0\par
+\cf14     </init-param>\cf0\par
+\cf14     -->\cf0\par
+\cf1     \cf10 <\cf11 load-on-startup\cf10 >\cf1 1\cf10 </\cf11 load-on-startup\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 servlet\cf10 >\cf0\par
+\cf1   \cf10 <\cf11 servlet-mapping\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 servlet-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 servlet-name\cf10 >\cf0\par
+\cf1     \cf10 <\cf11 url-pattern\cf10 >\cf1 /rest/*\cf10 </\cf11 url-pattern\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 servlet-mapping\cf10 >\cf0\par
+\cf1   \cf0\par
+\cf1\b   \cf14 <!-- ActivityLogger guest (visitor):\cf0\par
+\cf14      Device name specific access rights to \lang1035\f6 routine\lang1033\f4  DB and using REST method GET only\cf0\par
+\cf14      (this rule applies to all HTTP methods since they are not listed idividually as http-method elements inside web-resource-collection.).\cf0\par
+\cf14      Without auth-constraint element this rule applies to everyone regardless of their roles\cf0\par
+\cf14      (auth-constraint element without any roles inside would exclude everyone, i.e., protect the resource).\cf0\par
+\cf14      Use unencrypted HTTP connection without any login.\cf0\par
+\cf14      HTTPS (SSL) connection and HTTP basic authentication login are NOT required.\cf0\par
+\cf14      If this rule is checked first, Tomcat will not force redirect to port 443, 8181 or 9018 (SSL/HTTPS ports on different servers)?\cf0\par
+\cf14      In Jersey servlet code, check that requests without user credentials or roles only can use the GET method.\cf0\par
+\cf14      Do not protect the application root where we have the index.html page. -->\cf0\par
+\cf1   \cf14 <!-- REMOVED BECAUSE PREVENTS AUTHENTICATION FOR HTTPS CONNECTIONS.\cf0\par
+\cf14   <security-constraint>\cf0\par
+\cf14\tab <web-resource-collection>\cf0\par
+\cf14\tab   <web-resource-name>ActivityLogger</web-resource-name>\cf0\par
+\cf14\tab   <url-pattern>/rest/*</url-pattern>\cf0\par
+\cf14\tab   < !- - <http-method>GET</http-method> - ->\cf0\par
+\cf14\tab </web-resource-collection>\cf0\par
+\cf14\tab <user-data-constraint>\cf0\par
+\cf14   \tab   <transport-guarantee>NONE</transport-guarantee>\cf0\par
+\cf14\tab </user-data-constraint>\cf0\par
+\cf14   </security-constraint>\cf0\par
+\cf14   -->\cf0\par
+\par
+\cf1   \cf14 <!-- ActivityLogger administrator\lang1035\f6  and user\lang1033\f4 :\cf0\par
+\cf14      Full access rights to \lang1035\f6 routine\lang1033\f4  DB and using REST methods GET, POST, PUT and DELETE.\cf0\par
+\cf14      HTTPS (SSL) connection and HTTP basic authentication login are required.\cf0\par
+\cf14      In Jersey servlet code, check that requests come with administrator or user roles and restrict DB access accordingly. -->\cf0\par
+\cf1   \cf10 <\cf11 security-constraint\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 web-resource-collection\cf10 >\cf0\par
+\cf1\tab\tab\cf10 <\cf11 web-resource-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 web-resource-name\cf10 >\cf0\par
+\cf1\tab\tab\cf10 <\cf11 url-pattern\cf10 >\cf1 /rest/*\cf10 </\cf11 url-pattern\cf10 >\cf14 <!-- "/*" works too but "/ActivityLogger/rest/*" does not. -->\cf0\par
+\cf1\tab\tab\cf14 <!-- If method(s) is not listed, this rule applies to all methods:\cf0\par
+\cf14\tab\tab <http-method>GET</http-method>\cf0\par
+\cf14\tab\tab <http-method>POST</http-method>\cf0\par
+\cf14\tab\tab <http-method>PUT</http-method>\cf0\par
+\cf14\tab\tab <http-method>DELETE</http-method>\cf0\par
+\cf14\tab\tab <http-method>HEAD</http-method>\cf0\par
+\cf14\tab\tab <http-method>OPTIONS</http-method>\cf0\par
+\cf14\tab\tab <http-method>TRACE</http-method>\cf0\par
+\cf14\tab\tab -->\cf0\par
+\cf1     \cf10 </\cf11 web-resource-collection\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 auth-constraint\cf10 >\cf0\par
+\cf1\tab\tab\cf10 <\cf11 role-name\cf10 >\cf1 activity_logger-administrator\cf10 </\cf11 role-name\cf10 >\cf0\par
+\cf1\tab\tab\cf10 <\cf11 role-name\cf10 >\cf1 activity_logger-user\cf10 </\cf11 role-name\cf10 >\cf0\par
+\cf1\tab\cf10 </\cf11 auth-constraint\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 user-data-constraint\cf10 >\cf0\par
+\cf1\tab\tab\cf10 <\cf11 transport-guarantee\cf10 >\cf1 CONFIDENTIAL\cf10 </\cf11 transport-guarantee\cf10 >\cf0\par
+\cf1\tab\cf10 </\cf11 user-data-constraint\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 security-constraint\cf10 >\cf0\par
+\par
+\cf1   \cf10 <\cf11 login-config\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 auth-method\cf10 >\cf1 BASIC\cf10 </\cf11 auth-method\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 realm-name\cf10 >\cf1 ActivityLogger\cf10 </\cf11 realm-name\cf10 >\cf0\par
+\cf1   \cf10 </\cf11 login-config\cf10 >\cf0\par
+\par
+\cf1   \cf14 <!-- Security (authentication) roles referenced by this web application: -->\cf0\par
+\cf1   \cf10 <\cf11 security-role\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 role-name\cf10 >\cf1 activity_logger-administrator\cf10 </\cf11 role-name\cf10 >\cf0\par
+\cf1\tab\cf14 <!-- <description>HTTP basic authentication gives full DB access using GET, POST, PUT, DELETE over HTTPS.</description> -->\cf0\par
+\cf1   \cf10 </\cf11 security-role\cf10 >\cf0\par
+\cf1   \cf10 <\cf11 security-role\cf10 >\cf0\par
+\cf1\tab\cf10 <\cf11 role-name\cf10 >\cf1 activity_logger-user\cf10 </\cf11 role-name\cf10 >\cf0\par
+\cf1\tab\cf14 <!-- <description>HTTP basic authentication gives device name specific DB access using GET, POST, PUT, DELETE over HTTPS.</description> -->\cf0\par
+\cf1   \cf10 </\cf11 security-role\cf10 >\cf0\b0\par
+\par
+\cf10 </\cf11 web-app\cf10 >\cf0\f0\fs20\par
+\par
+In server.xml redirect-port for HTTP should point to correct HTTPS port so that protected pages automatically switch to secured connection!\par
+\par
+In the server web.xml you can change the session time-out from 30 min -> 1 min to ease testing:\par
+\cf1\f4\fs16     \cf10 <\cf11 session-config\cf10 >\cf0\par
+\cf1         \cf14 <!-- <session-timeout>30</session-timeout> -->\cf0\par
+\cf1         \cf10 <\cf11 session-timeout\cf10 >\cf1 1\cf10 </\cf11 session-timeout\cf10 >\cf0\par
+\cf1     \cf10 </\cf11 session-config\cf10 >\cf0\par
+\f0\fs20\par
+\b\fs22 Login screen jam when installing the service from the ActivityLogger.war package\b0\fs20\par
+\par
+http://localhost:8080/ActivityLogger/rest/hello\par
+=>\par
+Console:\par
+\f2\fs16 loka 29, 2012 7:38:59 IP. org.apache.catalina.realm.JDBCRealm getPassword\par
+SEVERE: Exception performing authentication\par
+org.postgresql.util.PSQLException: ERROR: syntax error at or near "null"\par
+  Position: 18\par
+        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2062)\par
+        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:1795)\par
+        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:257)\par
+        at org.postgresql.jdbc2.AbstractJdbc2Statement.execute(AbstractJdbc2Statement.java:479)\par
+        at org.postgresql.jdbc2.AbstractJdbc2Statement.executeWithFlags(AbstractJdbc2Statement.java:367)\par
+        at org.postgresql.jdbc2.AbstractJdbc2Statement.executeQuery(AbstractJdbc2Statement.java:271)\par
+        at org.apache.catalina.realm.JDBCRealm.getPassword(JDBCRealm.java:557)\par
+        at org.apache.catalina.realm.JDBCRealm.authenticate(JDBCRealm.java:408)\par
+        at org.apache.catalina.realm.JDBCRealm.authenticate(JDBCRealm.java:355)\par
+        at org.apache.catalina.authenticator.BasicAuthenticator.authenticate(BasicAuthenticator.java:157)\par
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:544)\par
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:168)\par
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:100)\par
+        at org.apache.catalina.valves.AccessLogValve.invoke(AccessLogValve.java:929)\par
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:118)\par
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:405)\par
+        at org.apache.coyote.http11.AbstractHttp11Processor.process(AbstractHttp11Processor.java:964)\par
+        at org.apache.coyote.AbstractProtocol$AbstractConnectionHandler.process(AbstractProtocol.java:515)\par
+        at org.apache.tomcat.util.net.JIoEndpoint$SocketProcessor.run(JIoEndpoint.java:302)\par
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1110)\par
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:603)\par
+        at java.lang.Thread.run(Thread.java:722)\f0\fs20\par
+\par
+server shows the above using the command:\par
+/home/routine/apache-tomcat-6.0.35/logs/\par
+tail -n 100 catalina.out |less\par
+tail -f catalina.2012-10-29.log\par
+\par
+Needed changes to server.xml (in C:\\Program Files\\Apache Software Foundation\\Apache Tomcat 7.0.22\\conf\\ and /home/routine/apache-tomcat-6.0.35/conf):\par
+\par
+\f2\fs16     <Connector port="8080" protocol="HTTP/1.1" \par
+               connectionTimeout="20000" \par
+               redirectPort="8181" /><!-- Default value: redirectPort="8443". Changed for HTTP->HTTPS to work. -->\f0\fs20\par
+ ->\par
+\f2\fs16     <Connector \b compressableMimeType="text/html,text/xml,text/css,application/javascript,text/javascript" compression="on" compressionMinSize="2048"\b0\par
+         connectionTimeout="20000" port="8080" protocol="HTTP/1.1" redirectPort="8181"/>\f0\fs20\par
+\par
+...\par
+\par
+\f2\fs16     <Engine name="Catalina" defaultHost="localhost">\par
+\par
+      <!--For clustering, please take a look at documentation at:\par
+          /docs/cluster-howto.html  (simple how to)\par
+          /docs/config/cluster.html (reference documentation) -->\par
+      <!--\par
+      <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/>\par
+      -->        \par
+\par
+      <!-- Use the LockOutRealm to prevent attempts to guess user passwords\par
+           via a brute-force attack -->\par
+      <Realm className="org.apache.catalina.realm.LockOutRealm">\par
+        <!-- This Realm uses the UserDatabase configured in the global JNDI\par
+             resources under the key "UserDatabase".  Any edits\par
+             that are performed against this UserDatabase are immediately\par
+             available for use by the Realm.  -->\par
+        <Realm className="org.apache.catalina.realm.UserDatabaseRealm"\par
+               resourceName="UserDatabase"/>\par
+      </Realm>\par
+\par
+      <!-- PostgreSQL database driver -->\par
+      <Realm className="org.apache.catalina.realm.JDBCRealm" driverName="org.postgresql.Driver"\par
+             connectionURL="jdbc:postgresql://localhost:5432/routine_db" connectionName="routine"\par
+             connectionPassword="x" username="routine" password="x" />\par
+      \par
+      <Host name="localhost"  appBase="webapps"\par
+            unpackWARs="true" autoDeploy="true">\par
+\par
+        <!-- SingleSignOn valve, share authentication between web applications\par
+             Documentation at: /docs/config/valve.html -->\par
+        <!--\par
+        <Valve className="org.apache.catalina.authenticator.SingleSignOn" />\par
+        -->\par
+\par
+        <!-- Access log processes all example.\par
+             Documentation at: /docs/config/valve.html\par
+             Note: The pattern used is equivalent to using pattern="common" -->\par
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"\par
+               prefix="localhost_access_log." suffix=".txt"\par
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />\par
+\par
+      </Host>\par
+    </Engine>\f0\fs20\par
+->\par
+\f2\fs16     <Engine defaultHost="localhost" name="Catalina">\par
+\par
+      <!--For clustering, please take a look at documentation at:\par
+          /docs/cluster-howto.html  (simple how to)\par
+          /docs/config/cluster.html (reference documentation) -->\par
+      <!--\par
+      <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/>\par
+      -->        \par
+\par
+\tab   <!-- PostgreSQL database driver -->\par
+ \par
+\cf8\tab   <!-- ActivityLogger routine database configuration -->\par
+\tab   <Realm className="org.apache.catalina.realm.JDBCRealm" connectionName="routine" connectionPassword="*"\par
+\tab          connectionURL="jdbc:postgresql://localhost:5432/routine_db" driverName="org.postgresql.Driver" password="*" username="routine"/>\par
+\par
+      <!-- Use the LockOutRealm to prevent attempts to guess user passwords\par
+           via a brute-force attack -->\par
+      <Realm className="org.apache.catalina.realm.LockOutRealm">\par
+        <!-- This Realm uses the UserDatabase configured in the global JNDI\par
+             resources under the key "UserDatabase".  Any edits\par
+             that are performed against this UserDatabase are immediately\par
+             available for use by the Realm.  -->\par
+        <Realm className="org.apache.catalina.realm.UserDatabaseRealm" resourceName="UserDatabase"/>\par
+      </Realm>\cf0\par
+\par
+      <Host appBase="webapps" autoDeploy="true" name="localhost" unpackWARs="true" \b xmlNamespaceAware="false" xmlValidation="false"\b0 >\par
+          \par
+        <!-- SingleSignOn valve, share authentication between web applications\par
+             Documentation at: /docs/config/valve.html -->\par
+        <!--\par
+        <Valve className="org.apache.catalina.authenticator.SingleSignOn" />\par
+        -->\par
+\par
+        <!-- Access log processes all example.\par
+             Documentation at: /docs/config/valve.html\par
+             Note: The pattern used is equivalent to using pattern="common" -->\par
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs" pattern="%h %l %u %t &quot;%r&quot; %s %b"\par
+               prefix="localhost_access_log." suffix=".txt"/>\par
+\par
+\b       <Context docBase="ActivityLogger" path="/ActivityLogger" reloadable="true" source="org.eclipse.jst.jee.server:ActivityLogger"/>\par
+\b0     </Host>\par
+    </Engine>\f0\fs20\par
+\par
+\cf8\b The solution is that org.apache.catalina.realm.JDBCRealm must appear before LockOutRealm in the settings file!\cf0\b0\par
+\par
+\ul\b\fs24 Testing using the Firefoxin Poster plugin\ulnone\b0\fs20\par
+\par
+The local server does not work over HTTPS connection, that is, the following URL jams after the message "Headers loaded...":\par
+https://localhost:8181/ActivityLogger/\par
+It does not matter if Tomcat was started stand alone or from Eclipse. The same service installed on server works normally.\par
+\par
+While developing, circumvent the problem by setting ActivityLogger web.xml:ss\'e4:\par
+\cf1\f4\tab\tab\cf10 <\cf11 transport-guarantee\cf10 >\cf1 CONFIDENTIAL\cf10 </\cf11 transport-guarantee\cf10 >\cf0\par
+\f0 ->\par
+\cf1\f4\tab\tab\cf10 <\cf11 transport-guarantee\cf10 >\cf1\lang1035\f6 NONE\cf10\lang1033\f4 </\cf11 transport-guarantee\cf10 >\cf0\par
+\f0 so that HTTPS is not enforced and http://localhost:8080/ActivityLogger/rest/* URLs function without encryption.\par
+\par
+\ul\b\fs24 Using URL query parameters in the code\ulnone\b0\fs20\par
+\par
+Only implemented in DevicesResource.java at this time!\par
+\par
+\ul DevicesResource.java\ulnone\tab (Uses Jersey annotations, also the commented out using of HttpServletRequest worked)\par
+\par
+\cf15\b\f7\fs14 package\cf1\b0  fi.vtt;\cf0\par
+\par
+\cf15\lang1035\b\f1 ...\cf0\lang1033\b0\f7\par
+\cf15\b import\cf1\b0  javax.servlet.http.HttpServletRequest;\cf0\par
+\cf15\lang1035\b\f1 ...\cf0\lang1033\b0\f7\par
+\cf15\b import\cf1\b0  javax.ws.rs.GET;\cf0\par
+\cf16 // import javax.ws.rs.POST;\cf0\par
+\cf16 // import javax.ws.rs.DefaultValue;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.Path;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.PathParam;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.Produces;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.QueryParam;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.core.Context;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.core.MediaType;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.core.Request;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.core.UriInfo;\cf0\par
+\cf16 // import javax.xml.bind.JAXBElement;\cf0\par
+\par
+\cf15\lang1035\b\f1 ...\cf0\lang1033\b0\f7\par
+\par
+\cf15\b import\cf1\b0  fi.vtt.activitylogger.Device;\cf0\par
+\par
+\cf16 // For checking authentication:\cf0\par
+\cf15\b import\cf1\b0  com.sun.jersey.core.util.Base64;\cf0\par
+\cf16 // import javax.ws.rs.core.Context;\cf0\par
+\cf15\b import\cf1\b0  javax.ws.rs.core.HttpHeaders;\cf0\par
+\par
+\lang1035\f1 ...\lang1033\f7\par
+\cf16 // This class maps to the following requests (the query parameters are optional for an administrator but device_name is required for a user): \cf0\par
+\cf16 // http://localhost:8080/ActivityLogger/rest/devices\cf0\par
+\cf16 // https://\lang1035\f1 server\lang1033\f7 :9018/ActivityLogger/rest/devices)\cf0\par
+\cf16 // Example of optional query parameters that can be added to the URL (some spaces added around & characters for readability):\cf0\par
+\cf16 // ? \ul timestamp\ulnone =2012-08-14T22:13:27+02 & device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae & logger_application_name=Samsung_Galaxy_S_log\cf0\par
+\cf16 //   & start_time=2012-06-18T22:54:15.000Z & end_time=2012-06-19\cf0\par
+\par
+\cf17 @Path\cf1 (\cf13 "/devices"\cf1 )\cf0\par
+\cf15\b public\cf1\b0  \cf15\b class\cf1\b0  DevicesResource \{\cf0\par
+\par
+\cf16\lang1035\f1     \lang1033\f7 // Fields\cf0\par
+\cf1\tab\cf0\par
+\cf16\lang1035\f1     \lang1033\f7 // Allows to insert contextual objects into the class, e.g. ServletContext, Request, Response, UriInfo.\cf0\par
+\cf17\lang1035\f1     \lang1033\f7 @Context\cf1  UriInfo \cf18 uriInfo\cf1 ;\cf0\par
+\cf17\lang1035\f1     \lang1033\f7 @Context\cf1  Request \cf18 request\cf1 ;\cf0\par
+\cf1     \cf17 @Context\cf1  HttpHeaders \cf18 headers\cf1 ; \cf16 // For checking authentication.\cf0\par
+\cf1     \cf17 @Context\cf1  HttpServletRequest \cf18 req\cf1 ; \cf16 // For traditional \ul servlet\ulnone  handling.\cf0\par
+\par
+\cf1     \cf16 // Query parameters in the URL:\cf0\par
+\cf1     \cf16 // @DefaultValue("") // Default value not needed for device_name. It will be null if not included in the request.\cf0\par
+\cf1     \cf17 @QueryParam\cf1 (\cf13 "device_name"\cf1 )\cf0\par
+\cf1     String \cf18 device_name\cf1  = \cf15\b null\cf1\b0 ;\tab\tab\cf16 // Optional request parameters for GET. This one identifies the user.\cf0\par
+\cf1     \cf17 @QueryParam\cf1 (\cf13 "logger_application_name"\cf1 )\tab\cf16 //\cf0\par
+\cf1     String \cf18 logger_application_name\cf1  = \cf15\b null\cf1\b0 ;\tab\cf16 // This limits results to specific logging application of the user (does not apply to devices!). \cf0\par
+\cf1     \cf17 @QueryParam\cf1 (\cf13 "timestamp"\cf1 )\tab\tab\cf16 //\cf0\par
+\cf1     String \cf18 timestamp\cf1  = \cf15\b null\cf1\b0 ;\tab\tab\cf16 // This gives the device time and time zone for formatting \ul timestamps\ulnone  for output (not implemented).\cf0\par
+\cf1     \cf16 // String period = null;   \tab // Search within times. Use ISO 8601 format, e.g.: "2012-06-18T22:54:15.000Z/2012-08-13T17:10:48+03" (not implemented).\cf0\par
+\cf1     \cf17 @QueryParam\cf1 (\cf13 "start_time"\cf1 )\tab\cf16 // Alternatively:\cf0\par
+\cf1     String \cf18 start_time\cf1  = \cf15\b null\cf1\b0 ;\tab\cf16 // Use these two fields with ISO 8601 \ul timestamps\ulnone .\cf0\par
+\cf1     \cf17 @QueryParam\cf1 (\cf13 "end_time"\cf1 )\tab\tab\cf16 //\cf0\par
+\cf1     String \cf18 end_time\cf1  = \cf15\b null\cf1\b0 ;\tab\tab\cf16 // \cf0\par
+\cf1     \cf16 // String \ul datetime\ulnone  = null;\tab\tab // Alternative search period using a single, possibly incomplete, \ul timestamp\ulnone , e.g. "2012-10" (not implemented).\cf0\par
+\cf1     \cf0\par
+\cf1     \cf15\b private\cf1\b0  \cf15\b final\cf1\b0  \cf15\b static\cf1\b0  Logger \cf18\i logger\cf1\i0  = LoggerFactory.\i getLogger\i0 (DevicesResource.\cf15\b class\cf1\b0 );\cf0\par
+\par
+\cf1     \cf16 // Methods\cf0\par
+\cf1     \cf0\par
+\cf1     \cf17 @GET\cf0\par
+\cf1     \cf17 @Produces\cf1 (\{MediaType.\cf18\i TEXT_XML\cf1\i0 , MediaType.\cf18\i APPLICATION_XML\cf1\i0 , MediaType.\cf18\i APPLICATION_JSON\cf1\i0\})\cf0\par
+\cf1       \cf16 // Browser XML response, XML application response and JSON application response all in the same method automatically.\cf0\par
+\cf1     \cf15\b public\cf1\b0  List<Device> getDevices() \{\cf0\par
+\cf1     \tab\cf0\par
+\cf1\lang1035\f1 ...\cf0\lang1033\f7\par
+\cf1         \cf0\par
+\cf1         \cf16 // Check access rights and filters\cf0\par
+\cf1         \cf0\par
+\cf1         \cf16 /* Variables for parsing query parameters from a HttpServletRequest. Not used here because we use Jersey annotations instead.\cf0\par
+\cf16         String device_name = null;\tab\tab\tab\tab // Optional request parameters for GET. This one identifies the user.\cf0\par
+\cf16         String logger_application_name = null;\tab // This limits results to specific logging application of the user (does not apply to devices!). \cf0\par
+\cf16         String \ul timestamp\ulnone  = null;\tab\tab\tab     // This gives the device time and time zone for formatting \ul timestamps\ulnone  for output (not implemented).\cf0\par
+\cf16         // String period = null;   \tab // Search within times. Use ISO 8601 format, e.g.: "2012-06-18T22:54:15.000Z/2012-08-13T17:10:48+03".\cf0\par
+\cf16         String start_time = null;\tab // Alternatively:\cf0\par
+\cf16         String end_time = null;\tab\tab // use these two fields with ISO 8601 \ul timestamps\ulnone .\cf0\par
+\cf16         // String \ul datetime\ulnone  = null;\tab\tab // Alternative search period using a single, possibly incomplete, \ul timestamp\ulnone , e.g. "2012-10".\cf0\par
+\cf16         */\cf0\par
+\cf1         \cf0\par
+\cf1         \cf16 // Get login \ul credentials\ulnone  for HTTP basic authentication (over HTTPS):\cf0\par
+\cf1         String header = \cf18 headers\cf1 .getRequestHeader(\cf13 "authorization"\cf1 ).get(0);\cf0\par
+\cf1         header = header.substring(\cf13 "Basic "\cf1 .length());\cf0\par
+\cf1         String[] creds = \cf15\b new\cf1\b0  String(Base64.\i base64Decode\i0 (header)).split(\cf13 ":"\cf1 );\cf0\par
+\cf1         String username = creds[0];\cf0\par
+\cf1         String password = creds[1];\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "["\cf1  + \cf15\b this\cf1\b0 .getClass() + \cf13 "] Basic HTTP authentication ('username','password'): '"\cf1  + username + \cf13 "','"\cf1  + password + \cf13 "'."\cf1  );\cf0\par
+\cf1           \cf16 // Debug print. DO NOT LEAVE HERE BECAUSE EXPOSES THE CREDENTIALS TO CONSOLE/LOGS.\cf0\par
+\par
+\cf1         \cf16 // Check authorization in the case this service is accidentally installed on a non-secure \ul Tomcat\ulnone  server:\cf0\par
+\cf1         \cf15\b if\cf1\b0  ( username==\cf15\b null\cf1\b0  || username.length()==0 )\cf0\par
+\cf1         \tab\cf15\b throw\cf1\b0  \cf15\b new\cf1\b0  javax.ws.rs.WebApplicationException(javax.ws.rs.core.Response.Status.\cf18\i UNAUTHORIZED\cf1\i0 ); \cf16 // Proper HTTP 401 response when invalid user.\cf0\par
+\cf1   \tab\tab\cf16 /* No need to have the method introduce RuntimeExceptions in its signature, see inheritance:\cf0\par
+\cf16    \tab\tab    java.lang.Object\cf0\par
+\cf16  \tab     \tab  extended by java.lang.Throwable\cf0\par
+\cf16\tab      \tab   extended by java.lang.Exception\cf0\par
+\cf16       \tab\tab    extended by java.lang.RuntimeException\cf0\par
+\cf16        \tab\tab     extended by javax.ws.rs.WebApplicationException */\cf1         \tab\cf0\par
+\cf1         \cf0\par
+\cf1         \cf16 // Parse request parameters from a HttpServletRequest (not the Jersey way of doing things):\cf0\par
+\cf1         \cf16 /*\cf0\par
+\cf16         device_name =  req.getParameter("device_name");\cf0\par
+\cf16         logger_application_name = req.getParameter("logger_application_name");\cf0\par
+\cf16         \ul timestamp\ulnone  = req.getParameter("\ul timestamp\ulnone ");\cf0\par
+\cf16         start_time = req.getParameter("start_time");\cf0\par
+\cf16         end_time = req.getParameter("end_time");\cf0\par
+\cf16         */\cf0\par
+\cf1\lang1035\f1 ...\cf0\lang1033\f7\par
+\cf1         \cf0\par
+\cf1         \cf16 /* https://localhost:8181/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27%2B02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae\cf0\par
+\cf16            \ul &logger_application_name\ulnone =Samsung_Galaxy_S_log\ul &start_time\ulnone =2012-06-18T22:54:15.000Z\ul &end_time\ulnone =2012-06-19\cf0\par
+\cf16         With URL encoding (+ in \ul timestamp\ulnone  remains):\cf0\par
+\cf16\tab\tab [class fi.vtt.DevicesResource] Basic HTTP authentication ('\ul username\ulnone ','password'): 'administrator','\lang1035\f1 ...\lang1033\f7 '.\cf0\par
+\cf16\tab\tab [class fi.vtt.DevicesResource] Full request URL: https://localhost:8181/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27%2B02\par
+\lang1035\f1\tab\tab\tab\tab\tab\lang1033\f7 &device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log\par
+\lang1035\f1\tab\tab\tab\tab\tab\lang1033\f7 &start_time=2012-06-18T22:54:15.000Z&end_time=2012-06-19\cf0\par
+\cf16\tab\tab [class fi.vtt.DevicesResource] URL request parameters ('name','value'):\cf0\par
+\cf16\tab\tab 'device_name','a619ed32f7d0de86a002757fbf8b29f4d1ab0aae'):\cf0\par
+\cf16\tab\tab 'logger_application_name','Samsung_Galaxy_S_log'):\cf0\par
+\cf16\tab\tab '\ul timestamp\ulnone ','2012-08-14T22:13:27+02'):\cf0\par
+\cf16\tab\tab 'start_time','2012-06-18T22:54:15.000Z'):\cf0\par
+\cf16\tab\tab 'end_time','2012-06-19'):\cf0\par
+\cf16\lang1035\f1 ...\cf0\lang1033\f7\par
+\cf16          */\cf0\par
+\cf1         \cf0\par
+\cf1\lang1035\f1 ...\cf0\lang1033\f7\par
+\par
+\cf1\}\cf0\f4\fs20\par
+\f0\par
+\ul\b\fs24 Using names and time to filter out returned results\ulnone\b0\fs20\par
+\par
+Only implemented in DevicesResource.java at this time!\par
+\par
+https://localhost:8181/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27+02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-09-19\par
+\par
+=>\par
+\par
+Console debug printouts:\par
+\par
+[class fi.vtt.DevicesResource] Basic HTTP authentication ('username','password'): 'administrator','...'.\par
+[class fi.vtt.DevicesResource] Full request URL: https://localhost:8181/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27+02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-09-19\par
+[class fi.vtt.DevicesResource] URL request parameters ('name','value'):\par
+'device_name','a619ed32f7d0de86a002757fbf8b29f4d1ab0aae'\par
+'logger_application_name','Samsung_Galaxy_S_log'\par
+'timestamp','2012-08-14T22:13:27 02'\par
+'start_time','2012-06-18T22:54:15.000Z'\par
+'end_time','2012-09-19'\par
+[Queries.java:getAllDevices()] PostgreSQL prepared statement: SELECT device_id, device_name, platform, device_creation_timestamp, mcc FROM devices WHERE device_name = 'a619ed32f7d0de86a002757fbf8b29f4d1ab0aae' AND '2012-06-18T22:54:15.000Z'::timestamp(0) with time zone <= device_creation_timestamp AND device_creation_timestamp <= '2012-09-19'::timestamp(0) with time zone \par
+\par
+HTTP response to the Web browser:\par
+\par
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?> \par
+  <devices>\par
+  <device>\par
+  <deviceId>3</deviceId> \par
+  <deviceName>a619ed32f7d0de86a002757fbf8b29f4d1ab0aae</deviceName> \par
+  <deviceTimestamp>2012-08-08 14:53:24.001+03</deviceTimestamp> \par
+  <mcc>514</mcc> \par
+  <platform>iOS</platform> \par
+  </device>\par
+  </devices>\par
+\par
+\ul\b\fs24 Advanced access control at code level utilizing Tomcat user roles\ulnone\b0\fs20\par
+\par
+Only implemented in DevicesResource.java at this time!\par
+\par
+\b\fs22 Authentication info available\b0\fs20\par
+\par
+\ul DevicesResource.java\ulnone\par
+\par
+...\par
+\cf15\b\f4\fs16 import\cf1\b0  javax.ws.rs.core.SecurityContext;\cf0\f0\fs20\par
+...\par
+\cf1\f4\fs16     \cf14 /** Process HTTP GET request: returns the list of devices (users) in the \lang1035\f6 routine\lang1033\f4 _db database\cf0\par
+\cf14      * \cf19\b @param\cf14\b0  sc Jersey Security Context information for determining the user role (access rights)\cf0\par
+\cf14      * \cf19\b @return\cf14\b0  A list of device objects that can be serialized into JSON, text, XML or visual (browser) XML. */\cf0\par
+\cf1     \cf17 @GET\cf0\par
+\cf1     \cf17 @Produces\cf1 (\{MediaType.\cf18\i TEXT_XML\cf1\i0 , MediaType.\cf18\i APPLICATION_XML\cf1\i0 , MediaType.\cf18\i APPLICATION_JSON\cf1\i0\})\cf0\par
+\cf1       \cf16 // Browser XML response, XML application response and JSON application response all in the same method automatically.\cf0\par
+\cf1     \cf15\b public\cf1\b0  List<Device> getDevices( \cf17 @Context\cf1  SecurityContext sc ) \{\cf0\par
+\f0\fs20 ...\par
+\cf1\f4\fs16         \cf16 // Get login \ul credentials\ulnone  for HTTP basic authentication (over HTTPS):\cf0\par
+\cf1         String header = \cf18 headers\cf1 .getRequestHeader(\cf13 "authorization"\cf1 ).get(0);\cf0\par
+\cf1         header = header.substring(\cf13 "Basic "\cf1 .length());\cf0\par
+\cf1         String[] creds = \cf15\b new\cf1\b0  String(Base64.\i base64Decode\i0 (header)).split(\cf13 ":"\cf1 );\cf0\par
+\cf1         String username = creds[0];\cf0\par
+\cf1         String password = creds[1];\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "["\cf1  + \cf15\b this\cf1\b0 .getClass() + \cf13 "] Basic HTTP authentication ('username','password'): '"\cf1  + username + \cf13 "','"\cf1  + password + \cf13 "'."\cf1  );\cf0\par
+\cf1           \cf16 // Debug print. DO NOT LEAVE HERE BECAUSE EXPOSES THE CREDENTIALS TO CONSOLE/LOGS.\cf0\par
+\par
+\cf1         \cf16 // Check authorization in the case this service is accidentally installed on a non-secure \ul Tomcat\ulnone  server:\cf0\par
+\cf1         \cf15\b if\cf1\b0  ( username==\cf15\b null\cf1\b0  || username.length()==0 )\cf0\par
+\cf1         \tab\cf15\b throw\cf1\b0  \cf15\b new\cf1\b0  javax.ws.rs.WebApplicationException(javax.ws.rs.core.Response.Status.\cf18\i UNAUTHORIZED\cf1\i0 ); \cf16 // Proper HTTP 401 response when invalid user.\cf0\par
+\cf1   \tab\tab\cf16 /* No need to have the method introduce RuntimeExceptions in its signature, see inheritance:\cf0\par
+\cf16    \tab\tab    java.lang.Object\cf0\par
+\cf16  \tab     \tab  extended by java.lang.Throwable\cf0\par
+\cf16\tab      \tab   extended by java.lang.Exception\cf0\par
+\cf16       \tab\tab    extended by java.lang.RuntimeException\cf0\par
+\cf16        \tab\tab     extended by javax.ws.rs.WebApplicationException */\cf0\par
+\cf1         \cf0\par
+\cf1         \cf16 // Test \ul Tomcat\ulnone  user roles as an alternative to the user name & password (so that we do not need to tie such information to the application):\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "["\cf1  + \cf15\b this\cf1\b0 .getClass() + \cf13 "] User role from the security context:"\cf1  );\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "\\tsc: "\cf1  + sc.toString() );\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "\\tIs activity_logger-administrator: "\cf1  + sc.isUserInRole( \cf13 "activity_logger-administrator"\cf1  ) );\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "\\tIs activity_logger-user: "\cf1  + sc.isUserInRole( \cf13 "activity_logger-user"\cf1  ) );\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "\\tuser principal: "\cf1  + sc.getUserPrincipal() );\cf0\par
+\cf1         System.\cf18\i out\cf1\i0 .println( \cf13 "\\tauthentication scheme: "\cf1  + sc.getAuthenticationScheme() );\cf0\fs20\par
+\f0 ...\par
+\par
+=> (login as administrator)\par
+\par
+\cf1\f4\fs16 [class fi.vtt.DevicesResource] Basic HTTP authentication ('username','password'): 'administrator','\lang1035\f6 ***\lang1033\f4 '.\cf0\par
+\cf1 [class fi.vtt.DevicesResource] User role from the security context:\cf0\par
+\cf1\tab sc: com.sun.jersey.spi.container.ContainerRequest@10bff0b\cf0\par
+\cf1\tab Is activity_logger-administrator: true\cf0\par
+\cf1\tab Is activity_logger-user: false\cf0\par
+\cf1\tab user principal: User username="administrator", roles="activity_logger-administrator"\cf0\par
+\cf1\tab authentication scheme: BASIC\cf0\par
+\cf1 [class fi.vtt.DevicesResource] Full request URL: http://localhost:8080/ActivityLogger/rest/devices\cf0\par
+\cf1 [class fi.vtt.DevicesResource] URL request parameters ('name','value'):\cf0\par
+\cf1 'device_name','null'\cf0\par
+\cf1 'logger_application_name','null'\cf0\par
+\cf1 'timestamp','null'\cf0\par
+\cf1 'start_time','null'\cf0\par
+\cf1 'end_time','null'\cf0\par
+\cf1 [Queries.java:getAllDevices()] New PostgreSQL prepared statement: SELECT device_id, device_name, platform, device_creation_timestamp, mcc\cf0\par
+\cf1  FROM devices \cf0\f0\fs20\par
+\par
+\b\fs22 Access control\b0\fs20\par
+\par
+\ul DevicesResource.java\ulnone\par
+\par
+...\par
+\cf1\f4\fs16         \cf16 // Check access restrictions (not the recommended way):\cf0\par
+\cf1         \cf15\b if\cf1\b0  ( ( \cf18 device_name\cf1  == \cf15\b null\cf1\b0  || \cf18 device_name\cf1 .length() == 0 ) && !ConditionalAccess.\cf18\i NAME_DB_ADMINISTRATOR\cf1\i0 .equals(username) )\cf0\par
+\cf1         \tab\cf15\b throw\cf1\b0  \cf15\b new\cf1\b0  javax.ws.rs.WebApplicationException(javax.ws.rs.core.Response.Status.\cf18\i FORBIDDEN\cf1\i0 );\cf0\par
+\cf1               \cf16 // A proper HTTP 403 response when an authenticated user has insufficient rights to the resource.\cf0\par
+\cf1               \cf16 // \ul Wikipedia\ulnone  (http://en.wikipedia.org/wiki/List_of_HTTP_status_codes):\cf0\par
+\cf1         \tab   \cf16 // "The request was a valid request, but the server is refusing to respond to it.[2] Unlike a 401 Unauthorized response, authenticating will\cf0\par
+\cf1               \cf16 // make no difference.[2] On servers where authentication is required, this commonly means that the provided \ul credentials\ulnone  were successfully\cf0\par
+\cf1               \cf16 // authenticated but that the \ul credentials\ulnone  still do not grant the client permission to access the resource (e.g. a recognized user attempting\cf0\par
+\cf1               \cf16 // to access restricted content)."\cf0\par
+\par
+\cf1         \cf16 // Check access restrictions (recommended way):\cf0\par
+\cf1         \cf15\b if\cf1\b0  ( ( \cf18 device_name\cf1  == \cf15\b null\cf1\b0  || \cf18 device_name\cf1 .length() == 0 ) && !sc.isUserInRole( ConditionalAccess.\cf18\i NAME_DB_ADMINISTRATOR_ROLE\cf1\i0  ) )\cf0\par
+\cf1         \tab\cf15\b throw\cf1\b0  \cf15\b new\cf1\b0  javax.ws.rs.WebApplicationException(javax.ws.rs.core.Response.Status.\cf18\i FORBIDDEN\cf1\i0 );\cf0\f0\fs20\par
+...\par
+\par
+\tab\tab\ul\fs32 UNIT TESTS\ulnone\fs20\par
+\par
+Project \i ActivityLoggerTest\i0  was used in earlier phanses of development but it is now stale and fails many of the tests. Specifically (from \i .../dist/ActivityLoggerTest 20130130-165900.xml\i0 ):\par
+\par
+test:AllTests\par
+  test.TestQueries\par
+    testLoggerApplications\tab\b MyTestLoggerAppX\b0  may already exist in the test database.\par
+    testApplications\tab\tab ok\par
+    testRoutineDataJsonParse\tab Deserialization does not work with the newer JSON array.\par
+    testRoutineClasses\tab\tab Wrong fixed id 1->25 (record is already in the test database).\par
+\tab\tab\tab\tab\b myTestRoutineclass\b0  may already exist in the DB.\par
+    testUserRoutines\tab\tab Timestamps now have a timezone specification (e.g. "+03") after them.\par
+    testRawMeasurements\tab ok\par
+    testDevices\tab\tab\tab\b foodevice\b0  may already exist in the DB.\par
+    testDBWriterWriteUser\tab Unimplemented.\par
+\par
+\par
+\tab\tab\ul\fs32 UNIMPLEMENTED FEATURES\ulnone\fs20\par
+\par
+- It is not possible to POST a full device record to the DB. If they are added implicitly, only the name and timestamp will be correct.\par
+- Only the devices service implements all the security and query parameter features, for example:\par
+\cf4\ul https://localhost:8181/ActivityLogger/rest/devices?timestamp=2012-08-14T22:13:27+02&device_name=a619ed32f7d0de86a002757fbf8b29f4d1ab0aae&logger_application_name=Samsung_Galaxy_S_log&start_time=2012-06-18T22:54:15.000Z&end_time=2012-09-19\cf0\ulnone\par
+- \i ActivityLoggerTest\i0  project has not been updated, it probably fails many of the old unit tests.\par
+\par
+- CSS for browser XML output?\par
+- Custom error pages?\par
+- Restrict result size when a table root is queried (e.g. raw_measurements)?\par
+- Only administrator can request all the data in a table?\par
+- Normal users need to add device_name parameter (hash) to the URLs?\par
+- Add the timestamp parameter to the URLs in ISO 8061 format. => Device time zone.\par
+- Change returned timestamps into the device time zone.\par
+- A table root view should give a list of \i links\i0  into the records, not all the records themselves, as with the REST ideology?\par
+- The raw_data service is unprotected!\par
+- The raw_data cannot be filtered (produces a lot of records).\par
+- The raw_measurements POST documentation is missing from the index.html.\par
+- Enhanced security from \cf4\ul http://software-security.sans.org/blog/2010/08/11/security-misconfigurations-java-webxml-files/\cf0\ulnone :\par
+  o <session-config>   <cookie-config>     <secure>true</secure>   </cookie-config> </session-config>\par
+  o <session-config>  <cookie-config>    <http-only>true</http-only>  </cookie-config></session-config>\par
+  o <session-config>   <tracking-mode>COOKIE</tracking-mode> </session-config> \par
+\par
+\par
+\tab\tab\ul\fs32 FIRST RELEASE PACKAGE\ulnone\fs20\par
+\par
+First release package contains in addition to the source code:\par
+ o A picture of the database (ERD).\par
+ o Database creation SQL scripts and test data.\par
+ o This document.\par
+ o Javadoc.\par
+\par
+\tab\tab\ul\fs32 MORE INFORMATION\ulnone\fs20\par
+\par
+\pard{\pntext\f8\'B7\tab}{\*\pn\pnlvlblt\pnf8\pnindent0{\pntxtb\'B7}}\fi-284\li284 index.html for the ActivityLogger service provides up-to-date details about the REST API, the used URLs and the data formats.\par
+{\pntext\f8\'B7\tab}See database scripts and database ERD.\par
+{\pntext\f8\'B7\tab}See example JSON messages meant for testing with the Firefox Poster plugin (folder \i example_upload_data\i0 ).\par
+{\pntext\f8\'B7\tab}Check out the ActivityLogger Javadoc.\par
+{\pntext\f8\'B7\tab}The source code contains a lot of additional comments about the intended use of the service and its implementation details.\par
+\pard\par
+\par
+}
+ 

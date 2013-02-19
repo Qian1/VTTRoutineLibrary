@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
+  <servlet>
+    <servlet-name>ActivityLogger</servlet-name>
+    <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+    <init-param>
+      <param-name>com.sun.jersey.config.property.packages</param-name>
+      <param-value>fi.vtt</param-value>
+    </init-param>
+    <!--  Alternative to using @XmlRootElement keyword in serializing classes for GET: Not used for now.
+    <init-param>
+        <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
+        <param-value>true</param-value>
+    </init-param>
+    -->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ActivityLogger</servlet-name>
+    <url-pattern>/rest/*</url-pattern>
+  </servlet-mapping>
+  
+  <!-- ActivityLogger guest (visitor):
+     Device name specific access rights to routine DB and using REST method GET only
+     (this rule applies to all HTTP methods since they are not listed idividually as http-method elements inside web-resource-collection.).
+     Without auth-constraint element this rule applies to everyone regardless of their roles
+     (auth-constraint element without any roles inside would exclude everyone, i.e., protect the resource).
+     Use unencrypted HTTP connection without any login.
+     HTTPS (SSL) connection and HTTP basic authentication login are NOT required.
+     If this rule is checked first, Tomcat will not force redirect to port 443, 8181 or etc. (SSL/HTTPS ports on different servers)?
+     In Jersey servlet code, check that requests without user credentials or roles only can use the GET method.
+     Do not protect the application root where we have the index.html page. -->
+  <!-- REMOVED BECAUSE PREVENTS AUTHENTICATION FOR HTTPS CONNECTIONS.
+  <security-constraint>
+	<web-resource-collection>
+	  <web-resource-name>ActivityLogger</web-resource-name>
+	  <url-pattern>/rest/*</url-pattern>
+	  < !- - <http-method>GET</http-method> - ->
+	</web-resource-collection>
+	<user-data-constraint>
+  	  <transport-guarantee>NONE</transport-guarantee>
+	</user-data-constraint>
+  </security-constraint>
+  -->
+
+  <!-- ActivityLogger administrator and user:
+     Full access rights to routine DB and using REST methods GET, POST, PUT and DELETE.
+     HTTPS (SSL) connection and HTTP basic authentication login are required.
+     In Jersey servlet code, check that requests come with administrator or user roles and restrict DB access accordingly. -->
+  <security-constraint>
+	<web-resource-collection>
+		<web-resource-name>ActivityLogger</web-resource-name>
+		<url-pattern>/rest/*</url-pattern><!-- "/*" works too but "/ActivityLogger/rest/*" does not. -->
+		<!-- If method(s) is not listed, this rule applies to all methods:
+		<http-method>GET</http-method>
+		<http-method>POST</http-method>
+		<http-method>PUT</http-method>
+		<http-method>DELETE</http-method>
+		<http-method>HEAD</http-method>
+		<http-method>OPTIONS</http-method>
+		<http-method>TRACE</http-method>
+		-->
+    </web-resource-collection>
+	<auth-constraint>
+		<role-name>activity_logger-administrator</role-name>
+		<role-name>activity_logger-user</role-name>
+	</auth-constraint>
+	<user-data-constraint>
+	    <!-- transport guarantee may force a connection to use SSL (CONFIDENTAL/INTEGRAL) but set to NONE if you need to test locally without HTTPS. -->
+		<!-- <transport-guarantee>CONFIDENTIAL</transport-guarantee> -->
+		<transport-guarantee>NONE</transport-guarantee>
+	</user-data-constraint>
+  </security-constraint>
+
+  <login-config>
+	<auth-method>BASIC</auth-method>
+	<realm-name>ActivityLogger</realm-name>
+  </login-config>
+
+  <!-- Security (authentication) roles referenced by this web application: -->
+  <security-role>
+	<role-name>activity_logger-administrator</role-name>
+	<!-- <description>HTTP basic authentication gives full DB access using GET, POST, PUT, DELETE over HTTPS.</description> -->
+  </security-role>
+  <security-role>
+	<role-name>activity_logger-user</role-name>
+	<!-- <description>HTTP basic authentication gives device name specific DB access using GET, POST, PUT, DELETE over HTTPS.</description> -->
+  </security-role>
+
+</web-app>
